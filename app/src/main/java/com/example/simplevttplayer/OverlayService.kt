@@ -25,6 +25,8 @@ class OverlayService : Service() {
         const val EXTRA_SUBTITLE_TEXT = "subtitle_text"
         const val ACTION_PAUSE_PLAY = "com.example.simplevttplayer.PAUSE_PLAY"    
         const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION"  // ✅ 新增重置 action
+                    const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
+                    const val EXTRA_FONT_SIZE = "font_size"
         
         val TAG: String = OverlayService::class.java.simpleName
     }
@@ -57,6 +59,11 @@ class OverlayService : Service() {
                 Log.d(TAG, "Received reset overlay position request")
                 resetOverlayPosition()
                 }
+                            ACTION_UPDATE_FONT_SIZE -> {
+                                                val fontSize = intent.getIntExtra(EXTRA_FONT_SIZE, 20)
+                                                                Log.d(TAG, "Received font size update: $fontSize")
+                                                                                updateOverlayFontSize(fontSize)
+                                                                                            }
                 else -> {
                     Log.w(TAG, "Unknown broadcast action: ${intent?.action}")
                 }
@@ -128,6 +135,7 @@ class OverlayService : Service() {
                 addAction(ACTION_UPDATE_SUBTITLE)              // ✅ 用 companion 中定義的常數
                 addAction(ACTION_PAUSE_PLAY)                   // ✅ 用 companion 中定義的常數
                 addAction(ACTION_RESET_OVERLAY_POSITION)       // ✅ 新增重置
+                            addAction(ACTION_UPDATE_FONT_SIZE)        // 浮窗字體大小更新
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter)
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
@@ -270,6 +278,16 @@ class OverlayService : Service() {
             Log.w(TAG, "Cannot move overlay: views not initialized")
         }
     }
+
+        // 更新覆蓋層字體大小
+            private fun updateOverlayFontSize(fontSize: Int) {
+                        if (::textViewOverlaySubtitle.isInitialized) {
+                                        textViewOverlaySubtitle.textSize = fontSize.toFloat()
+                                                    Log.d(TAG, "Overlay font size updated to: $fontSize")
+                                                            } else {
+                                        Log.w(TAG, "Cannot update font size: textViewOverlaySubtitle not initialized")
+                                                }
+                            }
 
 
 
