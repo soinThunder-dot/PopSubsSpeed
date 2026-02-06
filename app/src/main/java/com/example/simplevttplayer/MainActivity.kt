@@ -154,6 +154,21 @@ class MainActivity : AppCompatActivity() {
         buttonSelectFile.setOnClickListener { openFilePicker() }
         buttonPlayPause.setOnClickListener { togglePlayPause() }
         buttonReset.setOnClickListener { resetPlayback() }
+
+                // 浮窗字體大小輸入框監聽器
+                        editTextOverlayFontSize.addTextChangedListener(object : android.text.TextWatcher {
+                                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                                                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                                                override fun afterTextChanged(s: android.text.Editable?) {
+                                                                                    val fontSizeStr = s?.toString() ?: "20"
+                                                                                    val fontSize = fontSizeStr.toIntOrNull() ?: 20
+                                                                                    // 廣播字體大小更新到 OverlayService
+                                                                                    val intent = Intent(OverlayService.ACTION_UPDATE_FONT_SIZE)
+                                                                                                    intent.putExtra(OverlayService.EXTRA_FONT_SIZE, fontSize)
+                                                                                                                    androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this@MainActivity).sendBroadcast(intent)
+                                                                                                                                    Log.d(TAG, "Broadcasting font size update: $fontSize")
+                                                                                                                                                }
+                                                                        })
         buttonLaunchOverlay.setOnClickListener {
             isOverlayUIShown = !isOverlayUIShown
             if (isOverlayUIShown) { Log.d(TAG,"Overlay ON"); Toast.makeText(this,"Overlay Shown",Toast.LENGTH_SHORT).show(); handleLaunchOverlayClick(); sendSubtitleUpdate(textViewSubtitle.text.toString())
