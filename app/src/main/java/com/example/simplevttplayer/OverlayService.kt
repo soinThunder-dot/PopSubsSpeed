@@ -89,7 +89,8 @@ class OverlayService : Service() {
             if (buttonMoveUp != null) {
                 buttonMoveUp.setOnClickListener {
                     Log.d(TAG, "Move up button clicked!")
-                    moveOverlayUpByButtonClick()
+                    245
+                    ()
                 }
                 Log.d(TAG, "Move up button listener set successfully")
             } else {
@@ -240,7 +241,7 @@ class OverlayService : Service() {
     }
     private fun moveOverlayUpByButtonClick() {
         if (::params.isInitialized && ::overlayView.isInitialized) {
-            val moveDistance = 18
+            val moveDistance = 36 // 向上移動距離加倉 (value*2)
             Log.d(TAG, "Moving overlay up by $moveDistance pixels")
             params.y += moveDistance  // ✅ 改成 -= 才是向上
             try {
