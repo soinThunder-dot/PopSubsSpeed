@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:text="Speed:"
             android:textAppearance="?attr/textAppearanceBody1"
- android:textColor="#FFFF00"
+            android:textColor="#FFFF00"
             android:layout_marginEnd="8dp" />
         
         <Spinner
@@ -44,16 +44,16 @@
             android:layout_height="wrap_content"
             android:minWidth="100dp"
             android:entries="@array/speed_options" />
- <!-- 浮窗字體大小設定輸入框 -->
- <EditText
- android:id="@+id/editTextOverlayFontSize"
- android:layout_width="80dp"
- android:layout_height="wrap_content"
- android:layout_marginStart="16dp"
- android:inputType="number"
- android:hint="Font Size"
- android:text="20" />
-    </LinearLayout>
+     <!-- 浮窗字體大小設定輸入框 -->
+     <EditText
+         android:id="@+id/editTextOverlayFontSize"
+         android:layout_width="80dp"
+         android:layout_height="wrap_content"
+         android:layout_marginStart="16dp"
+         android:inputType="number"
+         android:hint="Font Size"
+         android:text="20" />
+        </LinearLayout>
 
     <TextView
         android:id="@+id/textViewCurrentTime"
@@ -64,18 +64,18 @@
         android:fontFamily="monospace"
         android:text="00:00.000"
         android:textAppearance="?attr/textAppearanceHeadline6" />
- <!-- 黃色時間戳記：滑動滑塊時顯示 currentTime * speed -->
- <TextView
- android:id="@+id/textViewYellowTime"
- android:layout_width="wrap_content"
- android:layout_height="wrap_content"
- android:layout_gravity="center_horizontal"
- android:layout_marginTop="5dp"
- android:fontFamily="monospace"
- android:text="00:00.000"
- android:textColor="#FFFF00"
- android:textAppearance="?attr/textAppearanceHeadline6"
- android:visibility="gone" />
+     <!-- 黃色時間戳記：滑動滑塊時顯示 currentTime * speed -->
+     <TextView
+         android:id="@+id/textViewYellowTime"
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         android:layout_gravity="center_horizontal"
+         android:layout_marginTop="5dp"
+         android:fontFamily="monospace"
+         android:text="00:00.000"
+         android:textColor="#FFFF00"
+         android:textAppearance="?attr/textAppearanceHeadline6"
+         android:visibility="gone" />
 
     <TextView
         android:id="@+id/textViewSubtitle"
