@@ -81,6 +81,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var buttonLaunchOverlay: MaterialButton // 按鈕：啓動覆蓋層
     private lateinit var sliderPlayback: Slider // Slider：時間軸控制
     private lateinit var spinnerSpeed: Spinner // Spinner：播放速度選擇
+     private lateinit var editTextOverlayFontSize: android.widget.EditText // 浮窗字體大小編輯框
 
     // --- Subtitle Data --- // --- 字幕資料定義區 ---
     data class SubtitleCue( val startTimeMs: Long, val endTimeMs: Long, val text: String ) // 字幕提示資料類別：起始時間/結束時間/文字內容
@@ -146,7 +147,9 @@ class MainActivity : AppCompatActivity() {
         buttonReset = findViewById(R.id.buttonReset)
         buttonLaunchOverlay = findViewById(R.id.buttonLaunchOverlay)
         sliderPlayback = findViewById(R.id.sliderPlayback) // Use Slider ID
-        spinnerSpeed = findViewById(R.id.spinnerSpeed)
+        150
+        = findViewById(R.id.spinnerSpeed)
+         editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize) // 初始化浮窗字體大小漄選框
 
         // Set Listeners
         buttonSelectFile.setOnClickListener { openFilePicker() }
