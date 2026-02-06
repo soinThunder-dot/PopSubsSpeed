@@ -7,6 +7,19 @@
     android:orientation="vertical"
     android:padding="16dp"
     tools:context=".MainActivity">
+     <!-- 浮窗字體大小控制框（上揉右侧） -->
+ <EditText
+  android:id="@+id/editTextOverlayFontSize"
+  android:layout_width="70dp"
+  android:layout_height="40dp"
+  android:layout_gravity="top|right"
+  android:layout_marginTop="8dp"
+  android:layout_marginEnd="8dp"
+  android:inputType="number"
+  android:hint="Font"
+  android:text="20"
+  android:textSize="12sp"
+  android:gravity="center" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonSelectFile"
