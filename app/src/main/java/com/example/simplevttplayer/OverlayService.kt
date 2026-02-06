@@ -89,8 +89,7 @@ class OverlayService : Service() {
             if (buttonMoveUp != null) {
                 buttonMoveUp.setOnClickListener {
                     Log.d(TAG, "Move up button clicked!")
-                    245
-                    ()
+                    moveOverlayUpByButtonClick()
                 }
                 Log.d(TAG, "Move up button listener set successfully")
             } else {
