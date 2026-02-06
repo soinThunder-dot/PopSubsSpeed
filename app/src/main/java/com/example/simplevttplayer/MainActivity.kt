@@ -147,9 +147,8 @@ class MainActivity : AppCompatActivity() {
         buttonReset = findViewById(R.id.buttonReset)
         buttonLaunchOverlay = findViewById(R.id.buttonLaunchOverlay)
         sliderPlayback = findViewById(R.id.sliderPlayback) // Use Slider ID
-        150
-        = findViewById(R.id.spinnerSpeed)
-         editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize) // 初始化浮窗字體大小漄選框
+        spinnerSpeed = findViewById(R.id.spinnerSpeed)
+        editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize) // 初始化浮窗字體大小漄選框
 
         // Set Listeners
         buttonSelectFile.setOnClickListener { openFilePicker() }
