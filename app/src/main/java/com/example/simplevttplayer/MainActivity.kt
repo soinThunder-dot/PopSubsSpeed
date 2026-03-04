@@ -223,7 +223,7 @@ class MainActivity : AppCompatActivity() {
     // --- Slider Setup ---
     private fun setupSliderListener() {
         sliderPlayback.addOnChangeListener { _, value, fromUser -> // Underscore for unused 'slider' param
-            if (fromUser) { textViewCurrentTime.text = formatTime(value.toLong()) }
+            if (fromUser) { textViewCurrentTime.text = formatTime(value.toLong()); textViewYellowTime.text = formatTime((value * playbackSpeed).toLong()) // 滑動時即時更新黃色時間戳 }
         }
 
         sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
@@ -319,7 +319,7 @@ class MainActivity : AppCompatActivity() {
                 if (subtitleCues.isNotEmpty()) {
                     Toast.makeText(this, "${format.uppercase()} loaded: ${subtitleCues.size} cues", Toast.LENGTH_SHORT).show()
                     buttonPlayPause.isEnabled = true; buttonReset.isEnabled = true; buttonLaunchOverlay.isEnabled = true
-                val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 5400000L // Add 90 minutes (blank time) to duration                    
+                val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 9000000L // Add 90 minutes (blank time) to duration                    
                     sliderPlayback.valueFrom = 0.0f; sliderPlayback.valueTo = duration.toFloat(); sliderPlayback.value = 0.0f; sliderPlayback.isEnabled = true
                     textViewSubtitle.text = "[Ready to play]"; textViewCurrentTime.text = formatTime(0)
                     isOverlayUIShown = true; setPlayButtonState(false); sendSubtitleUpdate("")
