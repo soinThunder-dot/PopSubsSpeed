@@ -244,7 +244,7 @@ class MainActivity : AppCompatActivity() {
                 val currentText = currentCue?.text ?: ""
                 textViewSubtitle.text = currentText
                 sendSubtitleUpdate(currentText)
-                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000) // 計算播放起始時間（考慮暫停時間）
                 if (wasPlayingBeforeSeek) { startPlayback() }
                 else { setPlayButtonState(false) } // Ensure icon is Play if not resuming
             }
@@ -304,7 +304,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun openFilePicker() {
-        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply { // 建立開啟檔案的 Intent
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
         }
@@ -669,7 +669,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         Log.d(TAG, "Screen kept on.")
 
-        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000) // 計算播放起始時間（考慮暫停時間）
         if (isOverlayUIShown) { val c = findCueForTime(pausedElapsedTimeMillis); sendSubtitleUpdate(c?.text ?: "") } else { sendSubtitleUpdate("") }
         handler.post(updateRunnable)
 
@@ -789,7 +789,7 @@ class MainActivity : AppCompatActivity() {
                     return // Stop runnable
                 }
             } else { pausePlayback(); sendSubtitleUpdate(""); return } // Safety check
-            handler.postDelayed(this, 50) // Update ~20 times per second
+            handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
         }
     }
 
