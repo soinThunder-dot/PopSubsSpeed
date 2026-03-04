@@ -318,10 +318,10 @@ class MainActivity : AppCompatActivity() {
                 subtitleCues = if (format == "vtt") parseVtt(inputStream) else parseSrt(inputStream)
                 if (subtitleCues.isNotEmpty()) {
                     Toast.makeText(this, "${format.uppercase()} loaded: ${subtitleCues.size} cues", Toast.LENGTH_SHORT).show()
-                    buttonPlayPause.isEnabled = true; buttonReset.isEnabled = true; buttonLaunchOverlay.isEnabled = true
+                    buttonPlayPause.isEnabled = true // 啟用播放/暫停按鈕                     buttonReset.isEnabled = true // 啟用重設按鈕                     buttonLaunchOverlay.isEnabled = true // 啟用覆蓋層按鈕
                 val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 9000000L // Add 90 minutes (blank time) to duration                    
-                    sliderPlayback.valueFrom = 0.0f; sliderPlayback.valueTo = duration.toFloat(); sliderPlayback.value = 0.0f; sliderPlayback.isEnabled = true
-                    textViewSubtitle.text = "[Ready to play]"; textViewCurrentTime.text = formatTime(0)
+                    sliderPlayback.valueFrom = 0.0f // 滑塊起始值設為 0                     sliderPlayback.valueTo = duration.toFloat() // 滑塊最大值設為影片總時長                     sliderPlayback.value = 0.0f // 滑塊當前位置重設為 0                     sliderPlayback.isEnabled = true // 啟用時間軸滑塊
+                    textViewSubtitle.text = "[Ready to play]" // 顯示就緒狀態                     textViewCurrentTime.text = formatTime(0) // 重設時間顯示為 0
                     isOverlayUIShown = true; setPlayButtonState(false); sendSubtitleUpdate("")
                 } else { Toast.makeText(this, "No cues parsed.", Toast.LENGTH_LONG).show(); resetPlaybackStateOnError() }
             } ?: run { Toast.makeText(this, "Failed file stream.", Toast.LENGTH_LONG).show(); Log.w(TAG, "Null InputStream: $uri"); resetPlaybackStateOnError() }
@@ -725,11 +725,11 @@ class MainActivity : AppCompatActivity() {
 
     // *** UPDATED for Slider & Keep Screen On flag ***
     private fun resetPlaybackStateOnError() {
-        subtitleCues = emptyList(); selectedFileUri = null
-        buttonPlayPause.isEnabled = false; buttonReset.isEnabled = false; buttonLaunchOverlay.isEnabled = false
+        subtitleCues = emptyList() // 清空字幕列表         selectedFileUri = null // 清除對應檔案 URI
+        buttonPlayPause.isEnabled = false // 禁用播放/暫停按鈕         buttonReset.isEnabled = false // 禁用重設按鈕         buttonLaunchOverlay.isEnabled = false // 禁用覆蓋層按鈕
         sliderPlayback.value = 0.0f // Reset Slider value
         sliderPlayback.isEnabled = false
-        isOverlayUIShown = true; textViewSubtitle.text = "[Error loading file]"; textViewCurrentTime.text = formatTime(0)
+        isOverlayUIShown = true // 重設覆蓋層顯示狀態         textViewSubtitle.text = "[Error loading file]" // 顯示錯誤訊息         textViewCurrentTime.text = formatTime(0) // 重設時間顯示
         if (!textViewFilePath.text.startsWith("File:")) { textViewFilePath.text = "No file or error" }
         sendSubtitleUpdate("")
 
@@ -755,7 +755,7 @@ class MainActivity : AppCompatActivity() {
     private val updateRunnable = object : Runnable {
         override fun run() {
             if (!isPlaying) return
-            val rawElapsedMillis = (System.nanoTime() - startTimeNanos) / 1_000_000
+            val rawElapsedMillis = (System.nanoTime() - startTimeNanos) / 1_000_000 // 計算原始經過時間（毫秒）
             val elapsedMillis = (rawElapsedMillis * playbackSpeed).toLong()  // 應用速度
             textViewCurrentTime.text = formatTime(elapsedMillis)
 
