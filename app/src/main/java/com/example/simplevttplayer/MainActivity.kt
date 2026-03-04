@@ -682,7 +682,7 @@ class MainActivity : AppCompatActivity() {
 
     // *** ADDED Keep Screen On logic & Icon change ***
     private fun pausePlayback() {
-        if (!isPlaying) return
+        if (!isPlaying) return // 安全防護：如果播放已停止則立即結束，不做任何運算
         isPlaying = false
         setPlayButtonState(false) // Set icon to Play
         // *** Allow screen to turn off ***
@@ -753,11 +753,11 @@ class MainActivity : AppCompatActivity() {
 
     // --- Subtitle Display Update Logic ---
     private val updateRunnable = object : Runnable {
-        override fun run() {
-            if (!isPlaying) return
+        override fun run() { // Runnable 入口：每次执行時更新字幕狀態
+            if (!isPlaying) return // 安全防護：如果播放已停止則立即結束，不做任何運算
             val rawElapsedMillis = (System.nanoTime() - startTimeNanos) / 1_000_000 // 計算原始經過時間（毫秒）
             val elapsedMillis = (rawElapsedMillis * playbackSpeed).toLong()  // 應用速度
-            textViewCurrentTime.text = formatTime(elapsedMillis)
+            textViewCurrentTime.text = formatTime(elapsedMillis) // 更新屏幕上的時間顯示（已乘上速度傀數）
 
             // Update Slider only if user isn't dragging it
             // Also check bounds to prevent crash if time slightly exceeds max due to timing
@@ -770,33 +770,33 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            val activeCue = findCueForTime(elapsedMillis)
-            val newText = activeCue?.text ?: ""
-            var textChanged = false
-            if (textViewSubtitle.text != newText) { textViewSubtitle.text = newText; textChanged = true }
-            if (textChanged || (activeCue == null && newText == "")) { sendSubtitleUpdate(newText) }
+            val activeCue = findCueForTime(elapsedMillis) // 查找目前時間點對應的字幕項目，找不到則為 null
+            val newText = activeCue?.text ?: "" // 取得字幕文字，沒有字幕則為空字串（这時覆蓋層窪白）
+            var textChanged = false // 標記字幕是否有變化，初始化為 false
+            if (textViewSubtitle.text != newText) { // 字幕內容有變化才更新，減少不必要重繪                 textViewSubtitle.text = newText // 更新 UI 上的字幕顯示                 textChanged = true // 標記字幕已變更             }
+            if (textChanged || (activeCue == null && newText == "")) { // 字幕有變化，或目前沒有字幕（空白時段）時才廣播 sendSubtitleUpdate(newText) }
 
             if (subtitleCues.isNotEmpty()) {
-                val lastCueEndTime = subtitleCues.last().endTimeMs
+                val lastCueEndTime = subtitleCues.last().endTimeMs // 取得最後一條字幕的結束時間作為播放終止標記
                 if (elapsedMillis >= lastCueEndTime) {
                     // Call pausePlayback first to handle flags/state/button icon
                     pausePlayback()
                     // Set final UI state after pausing
                     textViewCurrentTime.text = formatTime(lastCueEndTime)
-                    if (!sliderPlayback.isPressed) { sliderPlayback.value = sliderPlayback.valueTo }
+                    if (!sliderPlayback.isPressed) {                     // 播放結束時，將滑塊拓至最大值（前提：用戶沒有正在拖動）                     sliderPlayback.value = sliderPlayback.valueTo                 }
                     textViewSubtitle.text = "[Playback Finished]"
                     sendSubtitleUpdate("[Playback Finished]")
-                    return // Stop runnable
+                    return // 字幕播放到結尾，終止 Runnable 循環，不再接受下一次從特延計時
                 }
-            } else { pausePlayback(); sendSubtitleUpdate(""); return } // Safety check
+            } else {                 // 安全檢查：字幕列表為空時，停止播放並清除覆蓋層字幕                 pausePlayback() // 停止播放                 sendSubtitleUpdate("") // 清除覆蓋層字幕                 return // 終止 Runnable             }
             handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
         }
     }
 
     // --- Find Cue Logic ---
-    private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
+    private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
 
     // --- Format Time Logic ---
-    private fun formatTime(millis: Long): String { if (millis < 0) return "00:00.000"; val sT = millis / 1000; val m = sT / 60; val s = sT % 60; val ms = millis % 1000; return String.format("%02d:%02d.%03d", m, s, ms) }
+    private fun formatTime(millis: Long): String { if (millis < 0) return "00:00.000" // 負數返回預設字串         val sT = millis / 1000 // 毫秒轉秒         val m = sT / 60 // 得分鐘數         val s = sT % 60 // 得秒數（取餘數）         val ms = millis % 1000 // 剧餘毫秒         return String.format("%02d:%02d.%03d", m, s, ms) // 格式化：MM:SS.mmm }
 
 } // End of MainActivity class
