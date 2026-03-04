@@ -12,8 +12,8 @@ package com.example.simplevttplayer // **<<< CHECK THIS LINE CAREFULLY!** // 套
 
 import android.annotation.SuppressLint // 匯入：抑制 Lint 警告的註解
 import android.app.Activity // 匯入：Activity 基礎類別
-import android.content.BroadcastReceiver
-import android.content.Context
+import android.content.BroadcastReceiver // 廣播接收器（接收覆蓋層暫停/播放訊號）
+import android.content.Context // Context 上下文（用於串接系統資源）
 import android.content.Intent // 匯入：Intent 意圖類別（用於啟動活動或服務）
 import android.net.Uri // 匯入：Uri 統一資源識別符（用於檔案路徑）
 import androidx.appcompat.app.AppCompatActivity // 匯入：AppCompatActivity 相容性活動基礎類別
