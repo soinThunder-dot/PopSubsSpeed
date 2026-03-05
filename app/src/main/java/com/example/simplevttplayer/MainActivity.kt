@@ -82,6 +82,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sliderPlayback: Slider // Slider：時間軸控制
     private lateinit var spinnerSpeed: Spinner // Spinner：播放速度選擇
      private lateinit var editTextOverlayFontSize: android.widget.EditText // 浮窗字體大小編輯框
+        private lateinit var textViewYellowTime: TextView // 文字視圖：顯示速度調整後的時間
 
     // --- Subtitle Data --- // --- 字幕資料定義區 ---
     data class SubtitleCue( val startTimeMs: Long, val endTimeMs: Long, val text: String ) // 字幕提示資料類別：起始時間/結束時間/文字內容
@@ -149,6 +150,7 @@ class MainActivity : AppCompatActivity() {
         sliderPlayback = findViewById(R.id.sliderPlayback) // Use Slider ID
         spinnerSpeed = findViewById(R.id.spinnerSpeed)
         editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize) // 初始化浮窗字體大小漄選框
+                textViewYellowTime = findViewById(R.id.textViewYellowTime) // 初始化速度調整後時間顯示
 
         // Set Listeners
         buttonSelectFile.setOnClickListener { openFilePicker() }
