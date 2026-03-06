@@ -158,19 +158,18 @@ class MainActivity : AppCompatActivity() {
         buttonReset.setOnClickListener { resetPlayback() }
 
                 // 浮窗字體大小輸入框監聽器
-                        editTextOverlayFontSize.addTextChangedListener(object : android.text.TextWatcher {
-                                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                                                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                                                                override fun afterTextChanged(s: android.text.Editable?) {
-                                                                                    val fontSizeStr = s?.toString() ?: "20"
-                                                                                    val fontSize = fontSizeStr.toIntOrNull() ?: 20
-                                                                                    // 廣播字體大小更新到 OverlayService
-                                                                                    val intent = Intent(OverlayService.ACTION_UPDATE_FONT_SIZE)
-                                                                                                    intent.putExtra(OverlayService.EXTRA_FONT_SIZE, fontSize)
-                                                                                                                    androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this@MainActivity).sendBroadcast(intent)
-                                                                                                                                    Log.d(TAG, "Broadcasting font size update: $fontSize")
-                                                                                                                                                }
-                                                                        })
+        editTextOverlayFontSize.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val fontSizeStr = s?.toString() ?: "20"
+                val fontSize = fontSizeStr.toIntOrNull() ?: 20// 廣播字體大小更新到 OverlayService
+                val intent = Intent(OverlayService.ACTION_UPDATE_FONT_SIZE)
+                intent.putExtra(OverlayService.EXTRA_FONT_SIZE, fontSize)
+                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this@MainActivity).sendBroadcast(intent)
+                Log.d(TAG, "Broadcasting font size update: $fontSize")
+            }
+        })
         buttonLaunchOverlay.setOnClickListener {
             isOverlayUIShown = !isOverlayUIShown
             if (isOverlayUIShown) { Log.d(TAG,"Overlay ON"); Toast.makeText(this,"Overlay Shown",Toast.LENGTH_SHORT).show(); handleLaunchOverlayClick(); sendSubtitleUpdate(textViewSubtitle.text.toString())
@@ -320,10 +319,16 @@ class MainActivity : AppCompatActivity() {
                 subtitleCues = if (format == "vtt") parseVtt(inputStream) else parseSrt(inputStream)
                 if (subtitleCues.isNotEmpty()) {
                     Toast.makeText(this, "${format.uppercase()} loaded: ${subtitleCues.size} cues", Toast.LENGTH_SHORT).show()
-                    buttonPlayPause.isEnabled = true // 啟用播放/暫停按鈕                     buttonReset.isEnabled = true // 啟用重設按鈕                     buttonLaunchOverlay.isEnabled = true // 啟用覆蓋層按鈕
-                val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 9000000L // Add 90 minutes (blank time) to duration                    
-                    sliderPlayback.valueFrom = 0.0f // 滑塊起始值設為 0                     sliderPlayback.valueTo = duration.toFloat() // 滑塊最大值設為影片總時長                     sliderPlayback.value = 0.0f // 滑塊當前位置重設為 0                     sliderPlayback.isEnabled = true // 啟用時間軸滑塊
-                    textViewSubtitle.text = "[Ready to play]" // 顯示就緒狀態                     textViewCurrentTime.text = formatTime(0) // 重設時間顯示為 0
+                    buttonPlayPause.isEnabled = true // 啟用播放/暫停按鈕                     
+                    buttonReset.isEnabled = true // 啟用重設按鈕                     
+                    buttonLaunchOverlay.isEnabled = true // 啟用覆蓋層按鈕
+                    val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 9000000L // Add 90 minutes (blank time) to duration                    
+                    sliderPlayback.valueFrom = 0.0f // 滑塊起始值設為 0                     
+                    sliderPlayback.valueTo = duration.toFloat() // 滑塊最大值設為影片總時長                     
+                    sliderPlayback.value = 0.0f // 滑塊當前位置重設為 0                     
+                    sliderPlayback.isEnabled = true // 啟用時間軸滑塊
+                    textViewSubtitle.text = "[Ready to play]" // 顯示就緒狀態                     
+                    textViewCurrentTime.text = formatTime(0) // 重設時間顯示為 0
                     isOverlayUIShown = true; setPlayButtonState(false); sendSubtitleUpdate("")
                 } else { Toast.makeText(this, "No cues parsed.", Toast.LENGTH_LONG).show(); resetPlaybackStateOnError() }
             } ?: run { Toast.makeText(this, "Failed file stream.", Toast.LENGTH_LONG).show(); Log.w(TAG, "Null InputStream: $uri"); resetPlaybackStateOnError() }
@@ -727,11 +732,16 @@ class MainActivity : AppCompatActivity() {
 
     // *** UPDATED for Slider & Keep Screen On flag ***
     private fun resetPlaybackStateOnError() {
-        subtitleCues = emptyList() // 清空字幕列表         selectedFileUri = null // 清除對應檔案 URI
-        buttonPlayPause.isEnabled = false // 禁用播放/暫停按鈕         buttonReset.isEnabled = false // 禁用重設按鈕         buttonLaunchOverlay.isEnabled = false // 禁用覆蓋層按鈕
+        subtitleCues = emptyList() // 清空字幕列表         
+        selectedFileUri = null // 清除對應檔案 URI
+        buttonPlayPause.isEnabled = false // 禁用播放/暫停按鈕         
+        buttonReset.isEnabled = false // 禁用重設按鈕         
+        buttonLaunchOverlay.isEnabled = false // 禁用覆蓋層按鈕
         sliderPlayback.value = 0.0f // Reset Slider value
         sliderPlayback.isEnabled = false
-        isOverlayUIShown = true // 重設覆蓋層顯示狀態         textViewSubtitle.text = "[Error loading file]" // 顯示錯誤訊息         textViewCurrentTime.text = formatTime(0) // 重設時間顯示
+        isOverlayUIShown = true // 重設覆蓋層顯示狀態         
+        textViewSubtitle.text = "[Error loading file]" // 顯示錯誤訊息         
+        textViewCurrentTime.text = formatTime(0) // 重設時間顯示
         if (!textViewFilePath.text.startsWith("File:")) { textViewFilePath.text = "No file or error" }
         sendSubtitleUpdate("")
 
@@ -775,8 +785,11 @@ class MainActivity : AppCompatActivity() {
             val activeCue = findCueForTime(elapsedMillis) // 查找目前時間點對應的字幕項目，找不到則為 null
             val newText = activeCue?.text ?: "" // 取得字幕文字，沒有字幕則為空字串（这時覆蓋層窪白）
             var textChanged = false // 標記字幕是否有變化，初始化為 false
-            if (textViewSubtitle.text != newText) { // 字幕內容有變化才更新，減少不必要重繪                 textViewSubtitle.text = newText // 更新 UI 上的字幕顯示                 textChanged = true // 標記字幕已變更             }
-            if (textChanged || (activeCue == null && newText == "")) { // 字幕有變化，或目前沒有字幕（空白時段）時才廣播 sendSubtitleUpdate(newText) }
+            if (textViewSubtitle.text != newText) { // 字幕內容有變化才更新，減少不必要重繪                 
+                textViewSubtitle.text = newText // 更新 UI 上的字幕顯示                 
+                textChanged = true // 標記字幕已變更             }
+            if (textChanged || (activeCue == null && newText == "")) { // 字幕有變化，或目前沒有字幕（空白時段）時才廣播 
+                sendSubtitleUpdate(newText) }
 
             if (subtitleCues.isNotEmpty()) {
                 val lastCueEndTime = subtitleCues.last().endTimeMs // 取得最後一條字幕的結束時間作為播放終止標記
@@ -785,19 +798,25 @@ class MainActivity : AppCompatActivity() {
                     pausePlayback()
                     // Set final UI state after pausing
                     textViewCurrentTime.text = formatTime(lastCueEndTime)
-                    if (!sliderPlayback.isPressed) {                     // 播放結束時，將滑塊拓至最大值（前提：用戶沒有正在拖動）                     sliderPlayback.value = sliderPlayback.valueTo                 }
+                    if (!sliderPlayback.isPressed) {                     // 播放結束時，將滑塊拓至最大值（前提：用戶沒有正在拖動）                     
+                        sliderPlayback.value = sliderPlayback.valueTo                 
+                    }
                     textViewSubtitle.text = "[Playback Finished]"
                     sendSubtitleUpdate("[Playback Finished]")
                     return // 字幕播放到結尾，終止 Runnable 循環，不再接受下一次從特延計時
                 }
-            } else {                 // 安全檢查：字幕列表為空時，停止播放並清除覆蓋層字幕                 pausePlayback() // 停止播放                 sendSubtitleUpdate("") // 清除覆蓋層字幕                 return // 終止 Runnable             }
+            } else {                 // 安全檢查：字幕列表為空時，停止播放並清除覆蓋層字幕                 
+                pausePlayback() // 停止播放                 
+                sendSubtitleUpdate("") // 清除覆蓋層字幕                 
+                return // 終止 Runnable             }
             handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
         }
     }
                     }
 
     // --- Find Cue Logic ---
-    private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
+    private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         
+        return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
 
     // --- Format Time Logic ---
         private fun formatTime(millis: Long): String {
