@@ -800,7 +800,12 @@ class MainActivity : AppCompatActivity() {
     private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
 
     // --- Format Time Logic ---
-    private fun formatTime(millis: Long): String { if (millis < 0) return "00:00.000" // 負數返回預設字串         val sT = millis / 1000 // 毫秒轉秒         val m = sT / 60 // 得分鐘數         val s = sT % 60 // 得秒數（取餘數）         val ms = millis % 1000 // 剧餘毫秒         return String.format("%02d:%02d.%03d", m, s, ms) // 格式化：MM:SS.mmm }
+        private fun formatTime(millis: Long): String {
+        if (millis < 0) return "00:00.000" // 負數返回預設字串
+        val sT = millis / 1000 // 毫秒轉秒
+        val m = sT / 60 // 得分鐘數
+        val s = sT % 60 // 得秒數（取餘數）
+        val ms = millis % 1000 // 剧餘毫秒
+        return String.format("%02d:%02d.%03d", m, s, ms) // 格式化：MM:SS.mmm
         }
-
 } // End of MainActivity class
