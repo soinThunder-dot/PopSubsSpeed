@@ -794,7 +794,6 @@ class MainActivity : AppCompatActivity() {
             handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
         }
     }
-            }
 
     // --- Find Cue Logic ---
     private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
