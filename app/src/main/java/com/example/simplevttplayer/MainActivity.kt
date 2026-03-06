@@ -828,4 +828,5 @@ class MainActivity : AppCompatActivity() {
         return String.format("%02d:%02d.%03d", m, s, ms) // 格式化：MM:SS.mmm
         }
     }    
+}
 } // End of MainActivity class
