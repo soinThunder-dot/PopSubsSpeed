@@ -224,9 +224,11 @@ class MainActivity : AppCompatActivity() {
     // --- Slider Setup ---
     private fun setupSliderListener() {
         sliderPlayback.addOnChangeListener { _, value, fromUser -> // Underscore for unused 'slider' param
-            if (fromUser) { textViewCurrentTime.text = formatTime(value.toLong()); textViewYellowTime.text = formatTime((value * playbackSpeed).toLong()) // 滑動時即時更新黃色時間戳 }
+            if (fromUser) { textViewCurrentTime.text = formatTime(value.toLong()); 
+                            textViewYellowTime.text = formatTime((value * playbackSpeed).toLong()) // 滑動時即時更新黃色時間戳 }
+            }
         }
-
+        
         sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
             @SuppressLint("RestrictedApi")
             override fun onStartTrackingTouch(slider: Slider) {
@@ -248,7 +250,7 @@ class MainActivity : AppCompatActivity() {
                 startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000) // 計算播放起始時間（考慮暫停時間）
                 if (wasPlayingBeforeSeek) { startPlayback() }
                 else { setPlayButtonState(false) } // Ensure icon is Play if not resuming
-            }
+                }
         })
     }
 
@@ -809,24 +811,24 @@ class MainActivity : AppCompatActivity() {
                 pausePlayback() // 停止播放                 
                 sendSubtitleUpdate("") // 清除覆蓋層字幕                 
                 return // 終止 Runnable             }
-            handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
+                handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
+                }
+            }
         }
     }
-                    }
 
     // --- Find Cue Logic ---
     private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         
-        return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } }
+        return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } 
+    }
 
     // --- Format Time Logic ---
-        private fun formatTime(millis: Long): String {
+    private fun formatTime(millis: Long): String {
         if (millis < 0) return "00:00.000" // 負數返回預設字串
         val sT = millis / 1000 // 毫秒轉秒
         val m = sT / 60 // 得分鐘數
         val s = sT % 60 // 得秒數（取餘數）
         val ms = millis % 1000 // 剧餘毫秒
         return String.format("%02d:%02d.%03d", m, s, ms) // 格式化：MM:SS.mmm
-        }
-    }    
-}
+    }
 } // End of MainActivity class
