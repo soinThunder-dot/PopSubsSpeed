@@ -7,9 +7,7 @@
  * - 懸浮視窗覆蓋層服務管理
  * - 生命週期處理（修正：切換App時不暫停播放）
  */
-
 package com.example.simplevttplayer // **<<< CHECK THIS LINE CAREFULLY!**
-
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.BroadcastReceiver
@@ -43,7 +41,6 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 
 class MainActivity : AppCompatActivity() {
-
     companion object {
         private const val ACTION_UPDATE_SUBTITLE_LOCAL = OverlayService.ACTION_UPDATE_SUBTITLE
         private const val EXTRA_SUBTITLE_TEXT_LOCAL = OverlayService.EXTRA_SUBTITLE_TEXT
@@ -51,7 +48,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
-
     private val overlayPausePlayReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == OverlayService.ACTION_PAUSE_PLAY) {
@@ -79,7 +75,6 @@ class MainActivity : AppCompatActivity() {
 
     private var subtitleCues: List<SubtitleCue> = emptyList()
     private var selectedFileUri: Uri? = null
-
     private val handler = Handler(Looper.getMainLooper())
     private var isPlaying = false
     private var startTimeNanos: Long = 0L
@@ -165,8 +160,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupSliderListener() {
         sliderPlayback.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
-                textViewCurrentTime.text = formatTime(value.toLong())
-                textViewYellowTime.text = formatTime((value * playbackSpeed).toLong())
+                textViewCurrentTime.text = formatTime((value * playbackSpeed).toLong())
+                textViewYellowTime.text = formatTime(value.toLong())
             }
         }
         sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
@@ -237,8 +232,7 @@ class MainActivity : AppCompatActivity() {
                     val b = StringBuilder()
                     var cL = reader.readLine()
                     while (cL != null && cL.isNotBlank()) {
-                        if (b.isNotEmpty()) b.append("
-")
+                        if (b.isNotEmpty()) b.append(" ")
                         b.append(cL); cL = reader.readLine()
                     }
                     if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
@@ -263,8 +257,7 @@ class MainActivity : AppCompatActivity() {
                         val b = StringBuilder()
                         var tL = reader.readLine()
                         while (tL != null && tL.isNotBlank()) {
-                            if (b.isNotEmpty()) b.append("
-")
+                            if (b.isNotEmpty()) b.append(" ")
                             b.append(tL); tL = reader.readLine()
                         }
                         if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
@@ -357,8 +350,8 @@ class MainActivity : AppCompatActivity() {
         override fun run() {
             if (!isPlaying) return
             val eR = (System.nanoTime() - startTimeNanos) / 1_000_000
-            textViewCurrentTime.text = formatTime(eR)
-            textViewYellowTime.text = formatTime((eR * playbackSpeed).toLong())
+            textViewCurrentTime.text = formatTime((eR * playbackSpeed).toLong())
+            textViewYellowTime.text = formatTime(eR)
             if (!sliderPlayback.isPressed && eR.toFloat() <= sliderPlayback.valueTo) sliderPlayback.value = eR.toFloat()
             val cue = findCueForTime(eR)
             val nT = cue?.text ?: ""
