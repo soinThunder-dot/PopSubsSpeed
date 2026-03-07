@@ -8,6 +8,18 @@
     android:padding="16dp"
     tools:context=".MainActivity">
 
+    <!-- 浮窗字體大小控制框（上揉右側） -->
+    <EditText
+        android:id="@+id/editTextOverlayFontSize"
+        android:layout_width="70dp"
+        android:layout_height="40dp"
+        android:layout_gravity="top|right"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:inputType="number"
+        android:hint="Font"
+        android:text="20" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonSelectFile"
         android:layout_width="wrap_content"
@@ -41,7 +53,6 @@
             android:id="@+id/spinnerSpeed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
-
     </LinearLayout>
 
     <!-- Main timer (real elapsed time) -->
@@ -86,7 +97,9 @@
         android:layout_marginTop="5dp"
         android:layout_marginBottom="15dp"
         android:valueFrom="0.0"
-        android:valueTo="100.0" android:stepSize="0.0"    android:value="0.0"
+        android:valueTo="100.0"
+        android:stepSize="0.0"
+        android:value="0.0"
         android:enabled="false" />
 
     <LinearLayout
