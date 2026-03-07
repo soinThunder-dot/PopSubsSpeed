@@ -415,8 +415,7 @@ class MainActivity : AppCompatActivity() {
                     val textBuilder = StringBuilder()
                     var contentLine: String? = reader.readLine()
                     while (contentLine != null && contentLine.isNotBlank()) {
-                        if (textBuilder.isNotEmpty()) textBuilder.append("
-")
+                        if (textBuilder.isNotEmpty()) textBuilder.append("")
                         textBuilder.append(contentLine)
                         contentLine = reader.readLine()
                     }
@@ -447,8 +446,7 @@ class MainActivity : AppCompatActivity() {
                         val b = StringBuilder()
                         var txtL: String? = reader.readLine()
                         while (txtL != null && txtL.isNotBlank()) {
-                            if (b.isNotEmpty()) b.append("
-")
+                            if (b.isNotEmpty()) b.append("")
                             b.append(txtL)
                             txtL = reader.readLine()
                         }
