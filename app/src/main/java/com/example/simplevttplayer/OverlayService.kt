@@ -1,5 +1,4 @@
 package com.example.simplevttplayer // **IMPORTANT: Adjust package name if needed!**
-
 import android.app.Service
 import android.widget.Toast
 import android.content.BroadcastReceiver
@@ -16,76 +15,60 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.localbroadcastmanager.content.LocalBroadcastManager // Use LocalBroadcastManager
-
 class OverlayService : Service() {
-
     companion object {
         // These constants MUST match the ones used in MainActivity
         const val ACTION_UPDATE_SUBTITLE = "com.example.simplevttplayer.UPDATE_SUBTITLE"
         const val EXTRA_SUBTITLE_TEXT = "subtitle_text"
-        const val ACTION_PAUSE_PLAY = "com.example.simplevttplayer.PAUSE_PLAY"    
-        const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION"  // ✅ 新增重置 action
-                    const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
-                    const val EXTRA_FONT_SIZE = "font_size"
+        const val ACTION_PAUSE_PLAY = "com.example.simplevttplayer.PAUSE_PLAY" 
+        const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION" // ✅ 新增重置 action
+        const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
+        const val EXTRA_FONT_SIZE = "font_size"
         
         val TAG: String = OverlayService::class.java.simpleName
     }
-
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
     private lateinit var textViewOverlaySubtitle: TextView
-    private lateinit var params: WindowManager.LayoutParams    
-    //變數沒用
-    //private var totalMoveDistancePixels = 0  // ✅ 追蹤總共向上移動了多少
-
-    // ⬇️ 添加這 2 行
-    //private var lastUpdateTime = 0L
-    //private val UPDATE_THROTTLE_MS = 100L  // 100毫秒最小間隔
-    private var isPaused = false  // Track pause state
-
-
+    private lateinit var params: WindowManager.LayoutParams 
+    private var isPaused = false // Track pause state
     // Listens for broadcasts from MainActivity containing subtitle text
     private val subtitleUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.d(TAG, "Broadcast received! Action: ${intent?.action}")  // ✅ 加 Log 確認收到
-
+            Log.d(TAG, "Broadcast received! Action: ${intent?.action}") // ✅ 加 Log 確認收到
             when (intent?.action) {
                 ACTION_UPDATE_SUBTITLE -> {
                     val subtitleText = intent.getStringExtra(EXTRA_SUBTITLE_TEXT) ?: ""
                     Log.d(TAG, "Received subtitle broadcast: '$subtitleText'")
                     updateSubtitleText(subtitleText)
                 }
-                ACTION_RESET_OVERLAY_POSITION -> {  // ✅ 新增重置邏輯
-                Log.d(TAG, "Received reset overlay position request")
-                resetOverlayPosition()
+                ACTION_RESET_OVERLAY_POSITION -> { // ✅ 新增重置邏輯
+                    Log.d(TAG, "Received reset overlay position request")
+                    resetOverlayPosition()
                 }
-                            ACTION_UPDATE_FONT_SIZE -> {
-                                                val fontSize = intent.getIntExtra(EXTRA_FONT_SIZE, 20)
-                                                                Log.d(TAG, "Received font size update: $fontSize")
-                                                                                updateOverlayFontSize(fontSize)
-                                                                                            }
+                ACTION_UPDATE_FONT_SIZE -> {
+                    val fontSize = intent.getIntExtra(EXTRA_FONT_SIZE, 20)
+                    Log.d(TAG, "Received font size update: $fontSize")
+                    updateOverlayFontSize(fontSize)
+                }
                 else -> {
                     Log.w(TAG, "Unknown broadcast action: ${intent?.action}")
                 }
             }
         }
     }
-
-
     override fun onBind(intent: Intent?): IBinder? {
         // Not using binding, so return null
         return null
     }
-
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "OverlayService onCreate")
-
         try {
             // Inflate the overlay layout
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)
-        
+            
             // Set click listener on subtitle to toggle pause
             textViewOverlaySubtitle.setOnClickListener {
                 Log.d(TAG, "Subtitle clicked - toggle pause!")
@@ -102,19 +85,19 @@ class OverlayService : Service() {
             } else {
                 Log.w(TAG, "buttonMoveUp is null! Check overlay_layout.xml IDs")
             }
-        
+            
             // ✅ 把下面這些都移進來！
             
             // Get WindowManager service
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
+            
             // Define layout parameters for the overlay window
             val layoutFlag: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
                 WindowManager.LayoutParams.TYPE_PHONE
             }
-        
+            
             params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -125,43 +108,35 @@ class OverlayService : Service() {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
                 y = 0
             }
-        
+            
             // Add the view to the window manager
             windowManager.addView(overlayView, params)
             Log.d(TAG, "Overlay view added successfully.")
-        
+            
             // Register the broadcast receiver using LocalBroadcastManager
             val filter = IntentFilter().apply {
-                addAction(ACTION_UPDATE_SUBTITLE)              // ✅ 用 companion 中定義的常數
-                addAction(ACTION_PAUSE_PLAY)                   // ✅ 用 companion 中定義的常數
-                addAction(ACTION_RESET_OVERLAY_POSITION)       // ✅ 新增重置
-                            addAction(ACTION_UPDATE_FONT_SIZE)        // 浮窗字體大小更新
+                addAction(ACTION_UPDATE_SUBTITLE) // ✅ 用 companion 中定義的常數
+                addAction(ACTION_PAUSE_PLAY) // ✅ 用 companion 中定義的常數
+                addAction(ACTION_RESET_OVERLAY_POSITION) // ✅ 新增重置
+                addAction(ACTION_UPDATE_FONT_SIZE) // 浮窗字體大小更新
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter)
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
-        
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error during OverlayService onCreate", e)
             Toast.makeText(this, "Failed to create overlay.", Toast.LENGTH_SHORT).show()
             stopSelf()
         }
-
     }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "OverlayService onStartCommand Received")
-        // Service is started, view is managed in onCreate/onDestroy
-        // START_NOT_STICKY: If the service is killed, don't restart it automatically
         return START_NOT_STICKY
     }
-
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "OverlayService onDestroy")
-
-        // Remove the overlay view from the window
         try {
-            // Check if overlayView has been initialized before trying to remove it
             if (::overlayView.isInitialized && overlayView.isAttachedToWindow) {
                 windowManager.removeView(overlayView)
                 Log.d(TAG, "Overlay view removed.")
@@ -169,48 +144,23 @@ class OverlayService : Service() {
                 Log.d(TAG, "Overlay view not attached or not initialized, no removal needed.")
             }
         } catch (e: Exception) {
-            // Catch errors during view removal (e.g., view already removed)
             Log.e(TAG, "Error removing overlay view", e)
         }
-
-        // Unregister the broadcast receiver
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(subtitleUpdateReceiver)
             Log.d(TAG, "SubtitleUpdateReceiver unregistered.")
         } catch (e: IllegalArgumentException) {
-            // Can happen if receiver wasn't registered successfully or already unregistered
             Log.w(TAG, "Receiver possibly already unregistered or not registered.", e)
         }
     }
-
-    // *** THIS FUNCTION CONTAINS THE LOGIC TO HIDE/SHOW BASED ON TEXT ***
-    // Function to update the text view in the overlay
     private fun updateSubtitleText(text: String) {
-
-        /*
-        // ⬇️ 在函數最開始添加這 5 行
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastUpdateTime < UPDATE_THROTTLE_MS) {
-            Log.d(TAG, "Update throttled (too frequent)")
-            return  // 跳過這次更新
-        }
-        lastUpdateTime = currentTime
-        // ⬆️ 到這裡結束
-        */
-        
-        // Check if views are initialized before accessing them
-        // This prevents crashes if update is called before onCreate finishes or after onDestroy starts
         if (::textViewOverlaySubtitle.isInitialized && ::overlayView.isInitialized) {
             if (text.isBlank()) {
-                // Hide the entire overlay view if the text is blank/empty
-                // Check current visibility to avoid redundant calls
                 if (overlayView.visibility != View.GONE) {
                     Log.d(TAG, "Hiding overlay view (blank text received).")
-                    //***********overlayView.visibility = View.GONE
+                    overlayView.visibility = View.GONE
                 }
             } else {
-                // Show the overlay view and set the text if text is not blank
-                // Check current visibility to avoid redundant calls
                 if (overlayView.visibility != View.VISIBLE) {
                     Log.d(TAG, "Showing overlay view.")
                     overlayView.visibility = View.VISIBLE
@@ -221,26 +171,20 @@ class OverlayService : Service() {
             Log.w(TAG, "Overlay views not initialized when trying to update text ('$text').")
         }
     }
-
-    // Toggle pause state from overlay button
     private fun togglePauseFromOverlay() {
         isPaused = !isPaused
         
-        // Broadcast to MainActivity
         val intent = Intent(ACTION_PAUSE_PLAY).apply {
             putExtra("is_paused", isPaused)
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
         
-        // Update button color immediately
         updateSubtitlePauseState()
         
         Toast.makeText(this, if (isPaused) "Paused" else "Resumed", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "Pause toggled from overlay: isPaused=$isPaused")
     }
     
-    // Update pause button color based on state
-    // Update subtitle background color based on pause state
     private fun updateSubtitlePauseState() {
         val textColor = if (isPaused) android.graphics.Color.RED else android.graphics.Color.WHITE
         textViewOverlaySubtitle.setTextColor(textColor)
@@ -248,9 +192,9 @@ class OverlayService : Service() {
     }
     private fun moveOverlayUpByButtonClick() {
         if (::params.isInitialized && ::overlayView.isInitialized) {
-            val moveDistance = 36 // 向上移動距離加倉 (value*2)
+            val moveDistance = 36
             Log.d(TAG, "Moving overlay up by $moveDistance pixels")
-            params.y += moveDistance  // ✅ 改成 -= 才是向上
+            params.y += moveDistance
             try {
                 windowManager.updateViewLayout(overlayView, params)
                 Log.d(TAG, "Overlay moved up. New Y: ${params.y}")
@@ -261,16 +205,13 @@ class OverlayService : Service() {
             Log.w(TAG, "Cannot move overlay: views not initialized")
         }
     }
-
-        
+    
     private fun resetOverlayPosition() {
         if (::params.isInitialized && ::overlayView.isInitialized) {
-            params.y = 0  // 重置回最下面
-            //totalMoveDistancePixels = 0  // ✅ 同時重置已移動的距離
-            
+            params.y = 0
             try {
                 windowManager.updateViewLayout(overlayView, params)
-                Log.d(TAG, "Overlay position reset to Y: 0, Move distance reset to 0")
+                Log.d(TAG, "Overlay position reset to Y: 0")
             } catch (e: Exception) {
                 Log.e(TAG, "Error resetting overlay position", e)
             }
@@ -278,21 +219,12 @@ class OverlayService : Service() {
             Log.w(TAG, "Cannot move overlay: views not initialized")
         }
     }
-
-        // 更新覆蓋層字體大小
-            private fun updateOverlayFontSize(fontSize: Int) {
-                        if (::textViewOverlaySubtitle.isInitialized) {
-                                        textViewOverlaySubtitle.textSize = fontSize.toFloat()
-                                                    Log.d(TAG, "Overlay font size updated to: $fontSize")
-                                                            } else {
-                                        Log.w(TAG, "Cannot update font size: textViewOverlaySubtitle not initialized")
-                                                }
-                            }
-
-
-
-
-
+    private fun updateOverlayFontSize(fontSize: Int) {
+        if (::textViewOverlaySubtitle.isInitialized) {
+            textViewOverlaySubtitle.textSize = fontSize.toFloat()
+            Log.d(TAG, "Overlay font size updated to: $fontSize")
+        } else {
+            Log.w(TAG, "Cannot update font size: textViewOverlaySubtitle not initialized")
+        }
+    }
 }
-
-
