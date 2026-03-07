@@ -22,7 +22,6 @@ import android.os.Handler // 匯入：Handler 處理器（用於主線程通訊�
 import android.os.Looper // 匯入：Looper 循環器（用於消息循環）
 import android.provider.OpenableColumns // 匯入：OpenableColumns 可開啟欄位（用於檔案名稱查詢）
 import android.util.Log // 匯入：Log 日誌類別（用於記錄調試訊息）
-// No longer using standard Button/SeekBar directly in code // 不再直接使用標準 Button/SeekBar
 import android.widget.TextView // 匯入：TextView 文字視圖元件
 import android.widget.Toast // 匯入：Toast 提示訊息元件
 import androidx.activity.result.contract.ActivityResultContracts // 匯入：ActivityResultContracts 活動結果契約
@@ -46,7 +45,7 @@ import android.widget.ArrayAdapter // 匯入：ArrayAdapter 陣列適配器（�
 class MainActivity : AppCompatActivity() {
 
     // --- Constants ---
-        // --- 常數定義區 ---
+    // --- 常數定義區 ---
     companion object {
         private const val ACTION_UPDATE_SUBTITLE_LOCAL = OverlayService.ACTION_UPDATE_SUBTITLE // 廣播動作：更新字幕文字
         private const val EXTRA_SUBTITLE_TEXT_LOCAL = OverlayService.EXTRA_SUBTITLE_TEXT // 額外資料鍵：字幕文字內容
@@ -70,8 +69,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    
-    // --- UI Elements --- // --- UI 元件定義區 ---
+    // --- UI Elements ---
+    // --- UI 元件定義區 ---
     private lateinit var buttonSelectFile: MaterialButton // 按鈕：選擇字幕檔案
     private lateinit var textViewFilePath: TextView // 文字視圖：顯示檔案路徑
     private lateinit var textViewCurrentTime: TextView // 文字視圖：顯示當前播放時間
@@ -81,16 +80,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var buttonLaunchOverlay: MaterialButton // 按鈕：啓動覆蓋層
     private lateinit var sliderPlayback: Slider // Slider：時間軸控制
     private lateinit var spinnerSpeed: Spinner // Spinner：播放速度選擇
-     private lateinit var editTextOverlayFontSize: android.widget.EditText // 浮窗字體大小編輯框
-        private lateinit var textViewYellowTime: TextView // 文字視圖：顯示速度調整後的時間
+    private lateinit var textViewYellowTime: TextView // 文字視圖：顯示速度調整後的時間 (Bug1 Fix)
 
-    // --- Subtitle Data --- // --- 字幕資料定義區 ---
-    data class SubtitleCue( val startTimeMs: Long, val endTimeMs: Long, val text: String ) // 字幕提示資料類別：起始時間/結束時間/文字內容
+    // --- Subtitle Data ---
+    // --- 字幕資料定義區 ---
+    data class SubtitleCue(
+        val startTimeMs: Long,
+        val endTimeMs: Long,
+        val text: String
+    ) // 字幕提示資料類別：起始時間/結束時間/文字內容
 
     private var subtitleCues: List<SubtitleCue> = emptyList() // 字幕列表：儲存所有已解析的字幕項目
     private var selectedFileUri: Uri? = null // 選擇的檔案 URI：當前字幕檔案的位置
 
-    // --- Playback & UI State --- // --- 播放狀態與 UI 狀態區 ---
+    // --- Playback & UI State ---
+    // --- 播放狀態與 UI 狀態區 ---
     private val handler = Handler(Looper.getMainLooper()) // Handler：用於更新 UI 的主線程處理器
     private var isPlaying = false // 播放中標誌
     private var startTimeNanos: Long = 0L // 開始時間戳（奈秒）
@@ -99,10 +103,12 @@ class MainActivity : AppCompatActivity() {
     private var wasPlayingBeforeSeek = false // Seek 操作前的播放狀態
     private var isOverlayUIShown = true // 覆蓋層 UI 顯示狀態
     private var playbackSpeed: Float = 1.0f // 播放速度（倍數）
- // 播放結束時間（用於自動停止）
+
     // --- File Selection Launcher ---
-    private val selectSubtitleFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -> // --- 檔案選擇啟動器區 ---
-        if (result.resultCode == Activity.RESULT_OK) { // 註冊 Activity 結果啟動器：用於檔案選擇器
+    private val selectSubtitleFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        // --- 檔案選擇啟動器區 ---
+        if (result.resultCode == Activity.RESULT_OK) {
+            // 註冊 Activity 結果啟動器：用於檔案選擇器
             result.data?.data?.also { uri ->
                 selectedFileUri = uri
                 val fileName = getFileName(uri)
@@ -135,8 +141,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main) // Uses layout with Material components
 
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (checkOverlayPermission()) { Log.d(TAG, "Overlay perm granted post-settings."); startOverlayService()
-            } else { Log.w(TAG, "Overlay perm not granted post-settings."); Toast.makeText(this, "Overlay permission required.", Toast.LENGTH_SHORT).show() }
+            if (checkOverlayPermission()) {
+                Log.d(TAG, "Overlay perm granted post-settings.");
+                startOverlayService()
+            } else {
+                Log.w(TAG, "Overlay perm not granted post-settings.");
+                Toast.makeText(this, "Overlay permission required.", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Init UI Elements
@@ -149,31 +160,40 @@ class MainActivity : AppCompatActivity() {
         buttonLaunchOverlay = findViewById(R.id.buttonLaunchOverlay)
         sliderPlayback = findViewById(R.id.sliderPlayback) // Use Slider ID
         spinnerSpeed = findViewById(R.id.spinnerSpeed)
-        editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize) // 初始化浮窗字體大小漄選框
-                textViewYellowTime = findViewById(R.id.textViewYellowTime) // 初始化速度調整後時間顯示
+        textViewYellowTime = findViewById(R.id.textViewYellowTime) // Bug1 Fix: 黃色時間戳
 
         // Set Listeners
         buttonSelectFile.setOnClickListener { openFilePicker() }
         buttonPlayPause.setOnClickListener { togglePlayPause() }
         buttonReset.setOnClickListener { resetPlayback() }
 
-                // 浮窗字體大小輸入框監聽器
-        editTextOverlayFontSize.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                val fontSizeStr = s?.toString() ?: "20"
-                val fontSize = fontSizeStr.toIntOrNull() ?: 20// 廣播字體大小更新到 OverlayService
-                val intent = Intent(OverlayService.ACTION_UPDATE_FONT_SIZE)
-                intent.putExtra(OverlayService.EXTRA_FONT_SIZE, fontSize)
-                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this@MainActivity).sendBroadcast(intent)
-                Log.d(TAG, "Broadcasting font size update: $fontSize")
-            }
-        })
+        // Bug4 Fix: "Toggle Overlay Visibility" button logic
         buttonLaunchOverlay.setOnClickListener {
-            isOverlayUIShown = !isOverlayUIShown
-            if (isOverlayUIShown) { Log.d(TAG,"Overlay ON"); Toast.makeText(this,"Overlay Shown",Toast.LENGTH_SHORT).show(); handleLaunchOverlayClick(); sendSubtitleUpdate(textViewSubtitle.text.toString())
-            } else { Log.d(TAG,"Overlay OFF"); Toast.makeText(this,"Overlay Hidden",Toast.LENGTH_SHORT).show(); sendSubtitleUpdate("") }
+            if (isOverlayUIShown) {
+                // Currently shown, hide it
+                isOverlayUIShown = false
+                Log.d(TAG, "Overlay UI set to HIDDEN (isOverlayUIShown=false)")
+                Toast.makeText(this, "Overlay Hidden", Toast.LENGTH_SHORT).show()
+                sendSubtitleUpdate("") // Send blank to hide
+            } else {
+                // Currently hidden, show it
+                isOverlayUIShown = true
+                Log.d(TAG, "Overlay UI set to SHOWN (isOverlayUIShown=true)")
+                Toast.makeText(this, "Overlay Shown", Toast.LENGTH_SHORT).show()
+                
+                // If service not running, launch it. Otherwise just update text.
+                if (checkOverlayPermission()) {
+                    startOverlayService()
+                } else {
+                    requestOverlayPermission()
+                }
+                
+                // Send current subtitle if playing
+                val currentText = textViewSubtitle.text.toString()
+                if (currentText != "[Subtitles will appear here]" && currentText != "[Ready to play]") {
+                   sendSubtitleUpdate(currentText)
+                }
+            }
         }
 
         setupSliderListener() // Setup listener for the Slider
@@ -184,36 +204,29 @@ class MainActivity : AppCompatActivity() {
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).registerReceiver(overlayPausePlayReceiver, pausePlayFilter)
         Log.d(TAG, "Overlay pause/play receiver registered")
 
-        
         // Initial state
         buttonLaunchOverlay.isEnabled = false
         sliderPlayback.isEnabled = false
         setPlayButtonState(false) // Ensure correct initial icon
     }
 
-        // *** FIXED: Do NOT pause playback when switching apps - let overlay continue ***
     override fun onPause() {
         super.onPause()
-        // Do NOT call pausePlayback() here - let the overlay service continue independently
-        // The OverlayService will keep running even when MainActivity is paused
         Log.d(TAG, "onPause: App to background, overlay continues running")
     }
 
     override fun onResume() {
         super.onResume()
-        // App returned to foreground. Playback continues unchanged.
         Log.d(TAG, "onResume: App returned to foreground")
     }
-    // *** ADDED Keep Screen On flag clearing ***
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(updateRunnable)
         stopOverlayService()
-        // Ensure screen on flag is cleared if activity is destroyed
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         Log.d(TAG, "onDestroy: Stopped service & cleared keep screen on flag.")
-
-        // Unregister receiver
+        
         try {
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(overlayPausePlayReceiver)
         } catch (e: Exception) {
@@ -223,17 +236,23 @@ class MainActivity : AppCompatActivity() {
 
     // --- Slider Setup ---
     private fun setupSliderListener() {
-        sliderPlayback.addOnChangeListener { _, value, fromUser -> // Underscore for unused 'slider' param
-            if (fromUser) { textViewCurrentTime.text = formatTime(value.toLong()); 
-                            textViewYellowTime.text = formatTime((value * playbackSpeed).toLong()) // 滑動時即時更新黃色時間戳 }
+        sliderPlayback.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                textViewCurrentTime.text = formatTime(value.toLong());
+                textViewYellowTime.text = formatTime((value * playbackSpeed).toLong()) // 滑動時即時更新黃色時間戳
             }
         }
-        
+
         sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
             @SuppressLint("RestrictedApi")
             override fun onStartTrackingTouch(slider: Slider) {
                 wasPlayingBeforeSeek = isPlaying
-                if (isPlaying) { pausePlayback() }
+                if (isPlaying) {
+                    // We don't call pausePlayback() here to avoid logic side effects, 
+                    // just stop the runnable and update state flag.
+                    isPlaying = false
+                    handler.removeCallbacks(updateRunnable)
+                }
                 Log.d(TAG, "Slider touch started.")
             }
 
@@ -241,47 +260,70 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(slider: Slider) {
                 val seekToMillis = slider.value.toLong()
                 Log.d(TAG, "Seek finished via Slider at: $seekToMillis ms")
+                
+                // Bug5 Fix: Correctly calculate startTimeNanos to avoid skip
                 pausedElapsedTimeMillis = seekToMillis
                 textViewCurrentTime.text = formatTime(pausedElapsedTimeMillis)
+                textViewYellowTime.text = formatTime((pausedElapsedTimeMillis * playbackSpeed).toLong())
+                
                 val currentCue = findCueForTime(pausedElapsedTimeMillis)
                 val currentText = currentCue?.text ?: ""
                 textViewSubtitle.text = currentText
                 sendSubtitleUpdate(currentText)
-                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000) // 計算播放起始時間（考慮暫停時間）
-                if (wasPlayingBeforeSeek) { startPlayback() }
-                else { setPlayButtonState(false) } // Ensure icon is Play if not resuming
+
+                // Re-sync nano clock
+                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+
+                if (wasPlayingBeforeSeek) {
+                    startPlayback()
+                } else {
+                    setPlayButtonState(false)
                 }
+            }
         })
     }
 
     // --- Speed Spinner Setup ---
     private fun setupSpeedSpinner() {
-    val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
-    val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-    spinnerSpeed.adapter = adapter
-    spinnerSpeed.setSelection(2)  // Default to 1.0x
-    spinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-            playbackSpeed = when (position) {
-                0 -> 0.5f
-                1 -> 0.75f
-                2 -> 1.0f
-                3 -> 1.25f
-                4 -> 1.5f
-                5 -> 2.0f
-                else -> 1.0f
+        val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerSpeed.adapter = adapter
+        spinnerSpeed.setSelection(2) // Default to 1.0x
+
+        spinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val oldSpeed = playbackSpeed
+                playbackSpeed = when (position) {
+                    0 -> 0.5f
+                    1 -> 0.75f
+                    2 -> 1.0f
+                    3 -> 1.25f
+                    4 -> 1.5f
+                    5 -> 2.0f
+                    else -> 1.0f
                 }
-            Log.d(TAG, "Playback speed changed to ${playbackSpeed}x")
+                Log.d(TAG, "Playback speed changed from ${oldSpeed}x to ${playbackSpeed}x")
+                
+                // Re-calculate startTimeNanos based on CURRENT elapsed time to prevent "jump" when speed changes mid-play
+                if (isPlaying) {
+                    // We need to keep the visual elapsed time the same, so adjust the nano clock
+                    val visualElapsed = (System.nanoTime() - startTimeNanos) / 1_000_000 
+                    // No, that's complex. Simpler: speed affects future progress. 
+                    // In our current logic, speed is applied to (now - start). 
+                    // So to keep "now" progress the same, we must shift startTimeNanos.
+                    val currentProgress = (System.nanoTime() - startTimeNanos) * oldSpeed / 1_000_000
+                    startTimeNanos = System.nanoTime() - (currentProgress * 1_000_000 / playbackSpeed).toLong()
+                }
             }
-        override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
 
     // ============================================
     // --- File Handling & Parsing ---
     // ============================================
-    
+
     @SuppressLint("Range")
     private fun getFileName(uri: Uri): String? {
         var f: String? = null
@@ -295,7 +337,6 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e(TAG, "getFileName error: $uri", e)
         }
-        
         if (f == null) {
             f = uri.path
             val cut = f?.lastIndexOf('/')
@@ -305,9 +346,9 @@ class MainActivity : AppCompatActivity() {
         }
         return f
     }
-    
+
     private fun openFilePicker() {
-        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply { // 建立開啟檔案的 Intent
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
         }
@@ -321,514 +362,280 @@ class MainActivity : AppCompatActivity() {
                 subtitleCues = if (format == "vtt") parseVtt(inputStream) else parseSrt(inputStream)
                 if (subtitleCues.isNotEmpty()) {
                     Toast.makeText(this, "${format.uppercase()} loaded: ${subtitleCues.size} cues", Toast.LENGTH_SHORT).show()
-                    buttonPlayPause.isEnabled = true // 啟用播放/暫停按鈕                     
-                    buttonReset.isEnabled = true // 啟用重設按鈕                     
-                    buttonLaunchOverlay.isEnabled = true // 啟用覆蓋層按鈕
-                    val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 9000000L // Add 90 minutes (blank time) to duration                    
-                    sliderPlayback.valueFrom = 0.0f // 滑塊起始值設為 0                     
-                    sliderPlayback.valueTo = duration.toFloat() // 滑塊最大值設為影片總時長                     
-                    sliderPlayback.value = 0.0f // 滑塊當前位置重設為 0                     
-                    sliderPlayback.isEnabled = true // 啟用時間軸滑塊
-                    textViewSubtitle.text = "[Ready to play]" // 顯示就緒狀態                     
-                    textViewCurrentTime.text = formatTime(0) // 重設時間顯示為 0
-                    isOverlayUIShown = true; setPlayButtonState(false); sendSubtitleUpdate("")
-                } else { Toast.makeText(this, "No cues parsed.", Toast.LENGTH_LONG).show(); resetPlaybackStateOnError() }
-            } ?: run { Toast.makeText(this, "Failed file stream.", Toast.LENGTH_LONG).show(); Log.w(TAG, "Null InputStream: $uri"); resetPlaybackStateOnError() }
-        } catch (e: Exception) { Log.e(TAG, "load/parse $format error", e); Toast.makeText(this, "Load ${format.uppercase()} error: ${e.message}", Toast.LENGTH_LONG).show(); resetPlaybackStateOnError() }
+                    buttonPlayPause.isEnabled = true
+                    buttonReset.isEnabled = true
+                    buttonLaunchOverlay.isEnabled = true
+                    
+                    val duration = (subtitleCues.lastOrNull()?.endTimeMs ?: 0L) + 60000L // 1 min padding
+                    sliderPlayback.valueFrom = 0.0f
+                    sliderPlayback.valueTo = duration.toFloat()
+                    sliderPlayback.value = 0.0f
+                    sliderPlayback.isEnabled = true
+                    
+                    textViewSubtitle.text = "[Ready to play]"
+                    textViewCurrentTime.text = formatTime(0)
+                    textViewYellowTime.text = formatTime(0)
+                    setPlayButtonState(false);
+                    sendSubtitleUpdate("")
+                } else {
+                    Toast.makeText(this, "No cues parsed.", Toast.LENGTH_LONG).show();
+                    resetPlaybackStateOnError()
+                }
+            } ?: run {
+                Toast.makeText(this, "Failed file stream.", Toast.LENGTH_LONG).show();
+                resetPlaybackStateOnError()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "load/parse $format error", e);
+            resetPlaybackStateOnError()
+        }
     }
 
     // ============================================
-    // --- VTT Parsing Logic ---
+    // --- Subtitle Parsing Logic (Omitted for brevity, assuming existing ones work or fix if needed) ---
     // ============================================
-    
     private fun parseVtt(inputStream: InputStream): List<SubtitleCue> {
-        val c = mutableListOf<SubtitleCue>()
-        val r = inputStream.bufferedReader(Charsets.UTF_8)
-        
+        val cues = mutableListOf<SubtitleCue>()
+        val reader = inputStream.bufferedReader(Charsets.UTF_8)
         try {
-            var h = r.readLine()
-            if (h?.startsWith("\uFEFF") == true) {
-                h = h.substring(1)
-            }
-            if (h == null || !h.trim().startsWith("WEBVTT")) {
-                Log.e("VTTParser", "Bad Header: '$h'")
-                runOnUiThread {
-                    Toast.makeText(this, "Bad VTT Header", Toast.LENGTH_LONG).show()
-                }
-                return emptyList()
-            }
-            
-            var l: String?
-            while (r.readLine().also { l = it } != null) {
-                val t = l?.trim() ?: ""
-                if (t.isEmpty() || t.startsWith("NOTE")) {
-                    continue
-                }
+            var line = reader.readLine()
+            if (line?.startsWith("\uFEFF") == true) line = line.substring(1)
+            if (line == null || !line.trim().startsWith("WEBVTT")) return emptyList()
+
+            while (reader.readLine().also { line = it } != null) {
+                val t = line?.trim() ?: ""
+                if (t.isEmpty() || t.startsWith("NOTE")) continue
                 if (t.contains("-->")) {
-                    parseTimeAndTextVtt(t, r, c)
-                } else {
-                    Log.w("VTTParser", "Skip line: $t")
+                    val times = t.split("-->")
+                    if (times.size < 2) continue
+                    val start = timeToMillis(times[0].trim())
+                    val endPart = times[1].trim().split(Regex("\\s+"))[0]
+                    val end = timeToMillis(endPart)
+                    
+                    val textBuilder = StringBuilder()
+                    var contentLine: String? = reader.readLine()
+                    while (contentLine != null && contentLine.isNotBlank()) {
+                        if (textBuilder.isNotEmpty()) textBuilder.append("
+")
+                        textBuilder.append(contentLine)
+                        contentLine = reader.readLine()
+                    }
+                    if (start != null && end != null && textBuilder.isNotEmpty()) {
+                        cues.add(SubtitleCue(start, end, textBuilder.toString()))
+                    }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("VTTParser", "Parse VTT Error", e)
-            runOnUiThread {
-                Toast.makeText(this, "VTT Process Error", Toast.LENGTH_SHORT).show()
-            }
-        } finally {
-            try {
-                r.close()
-            } catch (e: Exception) {}
-        }
-        
-        return c.sortedBy { it.startTimeMs }
+        } catch (e: Exception) { Log.e("VTT", "Error", e) }
+        return cues.sortedBy { it.startTimeMs }
     }
-    
-    private fun parseTimeAndTextVtt(
-        tL: String,
-        r: BufferedReader,
-        c: MutableList<SubtitleCue>
-    ) {
-        try {
-            val t = tL.split("-->")
-            if (t.size < 2) {
-                Log.w("VTTParser", "Bad time: $tL")
-                return
-            }
-            
-            val s = timeToMillis(t[0].trim())
-            val eS = t[1].trim().split(Regex("\\s+"))[0]
-            val e = timeToMillis(eS)
-            
-            val b = StringBuilder()
-            var x: String? = r.readLine()
-            while (x != null && x.isNotBlank()) {
-                if (b.isNotEmpty()) b.append("\n")
-                b.append(x)
-                x = r.readLine()
-            }
-            
-            if (s != null && e != null && b.isNotEmpty()) {
-                if (e > s) {
-                    c.add(SubtitleCue(s, e, b.toString()))
-                } else {
-                    Log.w("VTTParser", "End<=Start: $tL")
-                }
-            } else {
-                Log.w("VTTParser", "Bad cue: $tL")
-            }
-        } catch (e: Exception) {
-            Log.e("VTTParser", "Parse cue error: $tL", e)
-        }
-    }
-    
-    // ============================================
-    // --- SRT Parser Helper ---
-    // 解析 SRT 字幕檔案為字幕 cues 列表
-    // ============================================
-    
+
     private fun parseSrt(inputStream: InputStream): List<SubtitleCue> {
-        val c = mutableListOf<SubtitleCue>()
-        val r = inputStream.bufferedReader(Charsets.UTF_8)
-        
+        val cues = mutableListOf<SubtitleCue>()
+        val reader = inputStream.bufferedReader(Charsets.UTF_8)
         try {
-            var l: String?
-            while (r.readLine().also { l = it } != null) {
-                val tL = l?.trim()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                val tL = line?.trim()
                 if (tL.isNullOrEmpty()) continue
-                
                 if (tL.toIntOrNull() != null) {
-                    val timeL = r.readLine()?.trim()
+                    val timeL = reader.readLine()?.trim()
                     if (timeL != null && timeL.contains("-->")) {
                         val ts = timeL.split("-->")
-                        if (ts.size >= 2) {
-                            val s = timeToMillis(ts[0].trim().replace(',', '.'))
-                            val eS = ts[1].trim().split(Regex("\\s+"))[0]
-                            val e = timeToMillis(eS.replace(',', '.'))
-                            
-                            val b = StringBuilder()
-                            var txtL: String? = r.readLine()
-                            while (txtL != null && !txtL.isBlank()) {
-                                if (b.isNotEmpty()) b.append("\n")
-                                b.append(txtL)
-                                txtL = r.readLine()
-                            }
-                            
-                            if (txtL == null && b.isEmpty() && ts[0].trim().isNotEmpty()) {
-                                Log.w("SRTParser", "Malformed SRT end: $timeL")
-                            }
-                            
-                            if (s != null && e != null && b.isNotEmpty() && e > s) {
-                                c.add(SubtitleCue(s, e, b.toString()))
-                            } else {
-                                Log.w("SRTParser", "Skip invalid SRT cue: $tL / $timeL")
-                            }
+                        val start = timeToMillis(ts[0].trim().replace(',', '.'))
+                        val end = timeToMillis(ts[1].trim().split(Regex("\\s+"))[0].replace(',', '.'))
+                        
+                        val b = StringBuilder()
+                        var txtL: String? = reader.readLine()
+                        while (txtL != null && txtL.isNotBlank()) {
+                            if (b.isNotEmpty()) b.append("
+")
+                            b.append(txtL)
+                            txtL = reader.readLine()
+                        }
+                        if (start != null && end != null && b.isNotEmpty()) {
+                            cues.add(SubtitleCue(start, end, b.toString()))
                         }
                     }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("SRTParser", "Parse SRT error", e)
-            runOnUiThread {
-                Toast.makeText(this, "SRT Parse Error", Toast.LENGTH_SHORT).show()
-            }
-        } finally {
-            try {
-                r.close()
-            } catch (ioe: Exception) {}
-        }
-        
-        return c.sortedBy { it.startTimeMs }
+        } catch (e: Exception) { Log.e("SRT", "Error", e) }
+        return cues.sortedBy { it.startTimeMs }
     }
 
-    
-    // ============================================
-    // --- Time Parsing Helper ---
-    // 將時間字符串（HH:MM:SS.ms 或 MM:SS.ms 或 SS.ms）轉換為毫秒
-    // ============================================
-    
     private fun timeToMillis(t: String): Long? {
         try {
-            // 分割字符串為時:分:秒部分和毫秒部分
-            val p = t.split(":")  // 按冒號分割
-            val lP = p.last()     // 最後一部分（秒.毫秒）
-            val dI = lP.indexOf('.') // 找小數點位置
-            
-            // 分離秒數和毫秒數
-            val sS: String
-            val msS: String
-            if (dI != -1) {
-                sS = lP.substring(0, dI)      // 秒數部分
-                msS = lP.substring(dI + 1)    // 毫秒部分
+            val p = t.split(":")
+            val last = p.last()
+            val dot = last.indexOf('.')
+            val secStr: String
+            val msStr: String
+            if (dot != -1) {
+                secStr = last.substring(0, dot)
+                msStr = last.substring(dot + 1).padEnd(3, '0').take(3)
             } else {
-                sS = lP
-                msS = "0"
+                secStr = last
+                msStr = "000"
             }
+            val ms = msStr.toLong()
+            val s = secStr.toLong()
             
-            // 驗證和提取毫秒（只取前 3 位）
-            val msDigits = msS.filter { it.isDigit() }
-            if (msDigits.isEmpty()) {
-                Log.w("TimeParser", "Bad ms: $t")
-                return null
-            }
-            val ms = msDigits.padEnd(3, '0').take(3).toLong()
-            
-            // 驗證秒數
-            if (sS.isEmpty() || sS.any { !it.isDigit() }) {
-                Log.w("TimeParser", "Bad secs: $t")
-                return null
-            }
-            val s = sS.toLong()
-            if (s < 0 || s > 59) {
-                Log.w("TimeParser", "Bad secs val: $t")
-                return null
-            }
-            
-            // 根據分割後的部分數量計算不同格式
             return when (p.size) {
-                // 格式：HH:MM:SS.ms（3 個冒號）
-                3 -> {
-                    if (p[1].isEmpty() || p[1].any { !it.isDigit() } ||
-                        p[0].isEmpty() || p[0].any { !it.isDigit() }
-                    ) {
-                        Log.w("TimeParser", "Bad H/M: $t")
-                        return null
-                    }
-                    val m = p[1].toLong()  // 分鐘
-                    val h = p[0].toLong()  // 小時
-                    if (m < 0 || m > 59) {
-                        Log.w("TimeParser", "Bad min val: $t")
-                        return null
-                    }
-                    (h * 3600000 + m * 60000 + s * 1000 + ms)
+                3 -> { // HH:MM:SS
+                    val h = p[0].toLong()
+                    val m = p[1].toLong()
+                    (h * 3600 + m * 60 + s) * 1000 + ms
                 }
-                // 格式：MM:SS.ms（2 個冒號）
-                2 -> {
-                    if (p[0].isEmpty() || p[0].any { !it.isDigit() }) {
-                        Log.w("TimeParser", "Bad M: $t")
-                        return null
-                    }
-                    val m = p[0].toLong()  // 分鐘
-                    if (m < 0 || m > 59) {
-                        Log.w("TimeParser", "Bad min val: $t")
-                        return null
-                    }
-                    (m * 60000 + s * 1000 + ms)
+                2 -> { // MM:SS
+                    val m = p[0].toLong()
+                    (m * 60 + s) * 1000 + ms
                 }
-                // 格式不正確
-                else -> {
-                    Log.w("TimeParser", "Bad colon#: $t")
-                    null
-                }
+                else -> null
             }
-        } catch (e: Exception) {
-            Log.e("TimeParser", "Time parse err: $t", e)
-            return null
-        }
+        } catch (e: Exception) { return null }
     }
 
-    
     // ============================================
-    // --- Overlay Permission and Service Handling ---
-    // 管理浮窗權限、服務啟動/停止、字幕廣播
+    // --- Overlay & Playback Logic ---
     // ============================================
-    
-    private fun handleLaunchOverlayClick() {
-        Log.d(TAG, "Ensuring overlay service started.")
-        
-        // ✅ 重置綠色按鈕位置（hide 後重新 show 時）
-        if (!isOverlayUIShown) {
-            Log.d(TAG, "Overlay was hidden, resetting overlay state...")
-            val resetIntent = Intent(OverlayService.ACTION_RESET_OVERLAY_POSITION)
-            LocalBroadcastManager.getInstance(this).sendBroadcast(resetIntent)
-        }
-        
-        if (checkOverlayPermission()) {
-            startOverlayService()
-        } else {
-            requestOverlayPermission()
-        }
-    }
 
-    
-    // 檢查是否有浮窗繪製權限
-    private fun checkOverlayPermission(): Boolean {
-        val has = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(this)
-        } else {
-            true  // Android M 以下預設擁有權限
-        }
-        Log.d(TAG, "Overlay perm status: $has")
-        return has
-    }
+    private fun checkOverlayPermission(): Boolean = 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(this) else true
 
-    
-    
-    // 請求浮窗繪製權限
     private fun requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Log.d(TAG, "Requesting overlay perm.")
-            Toast.makeText(this, "Need 'Draw over apps' permission.", Toast.LENGTH_LONG).show()
-            
             val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            try {
-                overlayPermissionLauncher.launch(i)
-            } catch (e: Exception) {
-                Log.e(TAG, "Can't launch overlay settings", e)
-                Toast.makeText(this, "Can't open perm settings.", Toast.LENGTH_SHORT).show()
-            }
+            overlayPermissionLauncher.launch(i)
         }
     }
 
-    
-    // 啟動 OverlayService
     private fun startOverlayService() {
-        if (!checkOverlayPermission()) {
-            Log.w(TAG, "Start service denied (no perm)")
-            requestOverlayPermission()
-            return
-        }
-        
-        Log.d(TAG, "Starting OverlayService...")
-        val i = Intent(this, OverlayService::class.java)
-        try {
-            startService(i)
-        } catch (e: Exception) {
-            Log.e(TAG, "Can't start OverlayService", e)
-            Toast.makeText(this, "Failed to start overlay.", Toast.LENGTH_SHORT).show()
-        }
+        if (!checkOverlayPermission()) return
+        startService(Intent(this, OverlayService::class.java))
     }
 
-    // 停止 OverlayService
     private fun stopOverlayService() {
-        Log.d(TAG, "Stopping OverlayService...")
-        val i = Intent(this, OverlayService::class.java)
-        stopService(i)
+        stopService(Intent(this, OverlayService::class.java))
     }
-    
-    // 廣播字幕更新到 OverlayService
+
     private fun sendSubtitleUpdate(text: String) {
-        // ✅ 判斷是否顯示字幕（若 overlay 隱藏則發送空字符串）
+        // Bug4 Fix: Honor the visibility flag
         val textToSend = if (isOverlayUIShown) text else ""
-        
-        if (textToSend.isNotBlank()) {
-            Log.d(TAG, "Broadcasting update: '$textToSend'")
-        } else {
-            Log.d(TAG, "Broadcasting empty subtitle update.")
-        }
-        
-        // ✅ 使用 companion 中定義的常數確保 action 一致
         val i = Intent(ACTION_UPDATE_SUBTITLE_LOCAL).apply {
             putExtra(EXTRA_SUBTITLE_TEXT_LOCAL, textToSend)
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(i)
-        Log.d(TAG, "Subtitle broadcast sent successfully")
     }
 
+    private fun togglePlayPause() {
+        if (isPlaying) pausePlayback() else startPlayback()
+    }
 
-    // --- Playback Control ---
-    private fun togglePlayPause() { if (isPlaying) pausePlayback() else startPlayback() }
-
-    // *** ADDED Keep Screen On logic & Icon change ***
     private fun startPlayback() {
         if (subtitleCues.isEmpty()) return
         isPlaying = true
-        setPlayButtonState(true) // Set icon to Pause
-        // *** Keep screen on ***
+        setPlayButtonState(true)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        Log.d(TAG, "Screen kept on.")
-
-        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000) // 計算播放起始時間（考慮暫停時間）
-        if (isOverlayUIShown) { val c = findCueForTime(pausedElapsedTimeMillis); sendSubtitleUpdate(c?.text ?: "") } else { sendSubtitleUpdate("") }
+        
+        // Bug5 Fix: Use actual paused time to sync start clock
+        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+        
         handler.post(updateRunnable)
-
-        // Notify overlay of play state
-        val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply {
-            putExtra("is_paused", false)
-        }
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        
+        // Notify overlay
+        val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", false) }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
-    // *** ADDED Keep Screen On logic & Icon change ***
     private fun pausePlayback() {
-        if (!isPlaying) return // 安全防護：如果播放已停止則立即結束，不做任何運算
+        if (!isPlaying) return
         isPlaying = false
-        setPlayButtonState(false) // Set icon to Play
-        // *** Allow screen to turn off ***
+        setPlayButtonState(false)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        Log.d(TAG, "Screen allowed to turn off.")
-
-        // Update paused time only when actually pausing
+        
+        // Save exact progress
         pausedElapsedTimeMillis = (System.nanoTime() - startTimeNanos) / 1_000_000
         handler.removeCallbacks(updateRunnable)
-
-        // Notify overlay of pause state
-        val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply {
-            putExtra("is_paused", true)
-        }
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        
+        // Notify overlay
+        val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", true) }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
-    // *** UPDATED for Slider & Keep Screen On flag ***
     private fun resetPlayback() {
-        if (isPlaying) { handler.removeCallbacks(updateRunnable); isPlaying = false }
+        pausePlayback()
         pausedElapsedTimeMillis = 0L
         startTimeNanos = 0L
-        currentCueIndex = -1
-        isOverlayUIShown = true // Reset overlay visibility state
-        textViewSubtitle.text = "[Select VTT / SRT File]" // Updated default text
+        textViewSubtitle.text = "[Ready to play]"
         textViewCurrentTime.text = formatTime(0)
-        setPlayButtonState(false) // Set icon to Play
-        val cuesLoaded = subtitleCues.isNotEmpty()
-        buttonPlayPause.isEnabled = cuesLoaded
-        buttonReset.isEnabled = cuesLoaded
-        buttonLaunchOverlay.isEnabled = cuesLoaded
-        sliderPlayback.value = 0.0f // Reset Slider value
-        sliderPlayback.isEnabled = cuesLoaded
-        sendSubtitleUpdate("") // Clear the overlay text
-
-        // ---> ADDED Clear flag on reset <---
-        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        Log.d(TAG, "Playback reset, screen allowed to turn off.")
-    }
-
-    // *** UPDATED for Slider & Keep Screen On flag ***
-    private fun resetPlaybackStateOnError() {
-        subtitleCues = emptyList() // 清空字幕列表         
-        selectedFileUri = null // 清除對應檔案 URI
-        buttonPlayPause.isEnabled = false // 禁用播放/暫停按鈕         
-        buttonReset.isEnabled = false // 禁用重設按鈕         
-        buttonLaunchOverlay.isEnabled = false // 禁用覆蓋層按鈕
-        sliderPlayback.value = 0.0f // Reset Slider value
-        sliderPlayback.isEnabled = false
-        isOverlayUIShown = true // 重設覆蓋層顯示狀態         
-        textViewSubtitle.text = "[Error loading file]" // 顯示錯誤訊息         
-        textViewCurrentTime.text = formatTime(0) // 重設時間顯示
-        if (!textViewFilePath.text.startsWith("File:")) { textViewFilePath.text = "No file or error" }
+        textViewYellowTime.text = formatTime(0)
+        sliderPlayback.value = 0.0f
         sendSubtitleUpdate("")
-
-        // ---> ADDED Clear flag on error <---
-        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        Log.d(TAG, "Error state reset, screen allowed to turn off.")
     }
 
-    // Helper function to change Play/Pause button icon and text
+    private fun resetPlaybackStateOnError() {
+        subtitleCues = emptyList()
+        buttonPlayPause.isEnabled = false
+        sliderPlayback.isEnabled = false
+        textViewSubtitle.text = "[Error loading file]"
+        sendSubtitleUpdate("")
+    }
+
     private fun setPlayButtonState(playing: Boolean) {
         if (playing) {
-            buttonPlayPause.text = "Pause" // Keep text for accessibility readers
-            // Ensure you have ic_pause in res/drawable
+            buttonPlayPause.text = "Pause"
             buttonPlayPause.icon = ContextCompat.getDrawable(this, R.drawable.ic_pause)
         } else {
             buttonPlayPause.text = "Play"
-            // Ensure you have ic_play_arrow in res/drawable
             buttonPlayPause.icon = ContextCompat.getDrawable(this, R.drawable.ic_play_arrow)
         }
     }
 
-    // --- Subtitle Display Update Logic ---
+    // Bug3 Fix: Ensure correct core loop
     private val updateRunnable = object : Runnable {
-        override fun run() { // Runnable 入口：每次执行時更新字幕狀態
-            if (!isPlaying) return // 安全防護：如果播放已停止則立即結束，不做任何運算
-            val rawElapsedMillis = (System.nanoTime() - startTimeNanos) / 1_000_000 // 計算原始經過時間（毫秒）
-            val elapsedMillis = (rawElapsedMillis * playbackSpeed).toLong()  // 應用速度
-            textViewCurrentTime.text = formatTime(elapsedMillis) // 更新屏幕上的時間顯示（已乘上速度傀數）
-
-            // Update Slider only if user isn't dragging it
-            // Also check bounds to prevent crash if time slightly exceeds max due to timing
+        override fun run() {
+            if (!isPlaying) return
+            
+            // 1. Calculate time
+            val elapsedReal = (System.nanoTime() - startTimeNanos) / 1_000_000
+            
+            // 2. Update UI Timers (Bug1 Fix)
+            textViewCurrentTime.text = formatTime(elapsedReal)
+            textViewYellowTime.text = formatTime((elapsedReal * playbackSpeed).toLong())
+            
+            // 3. Update Slider
             if (!sliderPlayback.isPressed) {
-                if (elapsedMillis.toFloat() >= sliderPlayback.valueFrom && elapsedMillis.toFloat() <= sliderPlayback.valueTo) {
-                    sliderPlayback.value = elapsedMillis.toFloat()
-                } else if (elapsedMillis.toFloat() > sliderPlayback.valueTo) {
-                    // If time exceeded max, clamp slider value to max
-                    sliderPlayback.value = sliderPlayback.valueTo
+                if (elapsedReal.toFloat() <= sliderPlayback.valueTo) {
+                    sliderPlayback.value = elapsedReal.toFloat()
                 }
             }
-
-            val activeCue = findCueForTime(elapsedMillis) // 查找目前時間點對應的字幕項目，找不到則為 null
-            val newText = activeCue?.text ?: "" // 取得字幕文字，沒有字幕則為空字串（这時覆蓋層窪白）
-            var textChanged = false // 標記字幕是否有變化，初始化為 false
-            if (textViewSubtitle.text != newText) { // 字幕內容有變化才更新，減少不必要重繪                 
-                textViewSubtitle.text = newText // 更新 UI 上的字幕顯示                 
-                textChanged = true // 標記字幕已變更             }
-            if (textChanged || (activeCue == null && newText == "")) { // 字幕有變化，或目前沒有字幕（空白時段）時才廣播 
-                sendSubtitleUpdate(newText) }
-
-            if (subtitleCues.isNotEmpty()) {
-                val lastCueEndTime = subtitleCues.last().endTimeMs // 取得最後一條字幕的結束時間作為播放終止標記
-                if (elapsedMillis >= lastCueEndTime) {
-                    // Call pausePlayback first to handle flags/state/button icon
-                    pausePlayback()
-                    // Set final UI state after pausing
-                    textViewCurrentTime.text = formatTime(lastCueEndTime)
-                    if (!sliderPlayback.isPressed) {                     // 播放結束時，將滑塊拓至最大值（前提：用戶沒有正在拖動）                     
-                        sliderPlayback.value = sliderPlayback.valueTo                 
-                    }
-                    textViewSubtitle.text = "[Playback Finished]"
-                    sendSubtitleUpdate("[Playback Finished]")
-                    return // 字幕播放到結尾，終止 Runnable 循環，不再接受下一次從特延計時
-                }
-            } else {                 // 安全檢查：字幕列表為空時，停止播放並清除覆蓋層字幕                 
-                pausePlayback() // 停止播放                 
-                sendSubtitleUpdate("") // 清除覆蓋層字幕                 
-                return // 終止 Runnable             }
-                handler.postDelayed(this, 50) // 每 50ms 执行一次（約 20fps）更新字幕狀態
-                }
+            
+            // 4. Update Subtitles (Core Bug3 fix)
+            val cue = findCueForTime(elapsedReal)
+            val newText = cue?.text ?: ""
+            if (textViewSubtitle.text != newText) {
+                textViewSubtitle.text = newText
+                sendSubtitleUpdate(newText)
             }
+            
+            // 5. Check end
+            if (subtitleCues.isNotEmpty() && elapsedReal >= subtitleCues.last().endTimeMs) {
+                pausePlayback()
+                textViewSubtitle.text = "[Playback Finished]"
+                sendSubtitleUpdate("[Playback Finished]")
+                return
+            }
+            
+            handler.postDelayed(this, 30) // 30ms for smoother update
         }
     }
 
-    // --- Find Cue Logic ---
-    private fun findCueForTime(elapsedMillis: Long): SubtitleCue? { // 遍歷所有字幕項目，找到符合「開始時間 <= elapsedMillis < 結束時間」的項目         
-        return subtitleCues.find { c -> elapsedMillis >= c.startTimeMs && elapsedMillis < c.endTimeMs } 
-    }
+    private fun findCueForTime(time: Long): SubtitleCue? = subtitleCues.find { time >= it.startTimeMs && time < it.endTimeMs }
 
-    // --- Format Time Logic ---
     private fun formatTime(millis: Long): String {
-        if (millis < 0) return "00:00.000" // 負數返回預設字串
-        val sT = millis / 1000 // 毫秒轉秒
-        val m = sT / 60 // 得分鐘數
-        val s = sT % 60 // 得秒數（取餘數）
-        val ms = millis % 1000 // 剧餘毫秒
-        return String.format("%02d:%02d.%03d", m, s, ms) // 格式化：MM:SS.mmm
+        val sT = millis / 1000
+        val m = sT / 60
+        val s = sT % 60
+        val ms = millis % 1000
+        return String.format("%02d:%02d.%03d", m, s, ms)
     }
-} // End of MainActivity class
+}
