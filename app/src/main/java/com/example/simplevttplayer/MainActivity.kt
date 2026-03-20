@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
                 sendSubtitleUpdate(textViewSubtitle.text.toString())
             } else {
                 sendSubtitleUpdate("")
+                stopOverlayService()
             }
         }
 
@@ -174,7 +175,6 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(slider: Slider) {
                 pausedElapsedTimeMillis = slider.value.toLong()
                 startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
-                startPlayback()
             }
         })
     }
@@ -353,7 +353,7 @@ class MainActivity : AppCompatActivity() {
             textViewCurrentTime.text = formatTime((eR * playbackSpeed).toLong())
             textViewYellowTime.text = formatTime(eR)
             if (!sliderPlayback.isPressed && eR.toFloat() <= sliderPlayback.valueTo) sliderPlayback.value = eR.toFloat()
-            val cue = findCueForTime(eR)
+            val cue = findCueForTime((eR * playbackSpeed).toLong())  // ✅ 這樣字幕查詢才會根據速度調整後的時間去比對
             val nT = cue?.text ?: ""
             if (textViewSubtitle.text != nT) { textViewSubtitle.text = nT; sendSubtitleUpdate(nT) }
             if (subtitleCues.isNotEmpty() && eR >= subtitleCues.last().endTimeMs) {
