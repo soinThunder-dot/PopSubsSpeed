@@ -158,7 +158,7 @@ class OverlayService : Service() {
             if (text.isBlank()) {
                 if (overlayView.visibility != View.GONE) {
                     Log.d(TAG, "Hiding overlay view (blank text received).")
-                    overlayView.visibility = View.GONE
+                    //***********overlayView.visibility = View.GONE
                 }
             } else {
                 if (overlayView.visibility != View.VISIBLE) {
