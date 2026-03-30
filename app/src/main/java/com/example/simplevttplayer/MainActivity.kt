@@ -356,10 +356,10 @@ class MainActivity : AppCompatActivity() {
             val cue = findCueForTime((eR * playbackSpeed).toLong())  // ✅ 這樣字幕查詢才會根據速度調整後的時間去比對
             val nT = cue?.text ?: ""
             if (textViewSubtitle.text != nT) { textViewSubtitle.text = nT; sendSubtitleUpdate(nT) }
-            if (subtitleCues.isNotEmpty() && eR >= subtitleCues.last().endTimeMs) {
-                pausePlayback(); textViewSubtitle.text = "[Playback Finished]"; sendSubtitleUpdate("[Playback Finished]")
-                return
-            }
+            //if (subtitleCues.isNotEmpty() && eR >= subtitleCues.last().endTimeMs) {
+                //pausePlayback(); textViewSubtitle.text = "[Playback Finished]"; sendSubtitleUpdate("[Playback Finished]")
+                //return
+            //}                            //把這整個 if 區塊刪掉，改成讓 runnable 在超出範圍後自然停止：
             handler.postDelayed(this, 30)
         }
     }
