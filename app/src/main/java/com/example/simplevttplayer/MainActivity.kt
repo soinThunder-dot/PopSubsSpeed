@@ -208,7 +208,7 @@ class MainActivity : AppCompatActivity() {
                     buttonPlayPause.isEnabled = true
                     buttonReset.isEnabled = true
                     buttonLaunchOverlay.isEnabled = true
-                    val duration = (subtitleCues.last().endTimeMs) + 60000L
+                    val duration = (subtitleCues.last().endTimeMs) + 7200000L
                     sliderPlayback.valueTo = duration.toFloat()
                     sliderPlayback.isEnabled = true
                     textViewSubtitle.text = "[Ready to play]"
