@@ -1,5 +1,6 @@
 # PopSubs - Standalone Android Subtitle Player (VTT/SRT)
 ![image](https://github.com/soinThunder-dot/PopSubsSpeed/blob/2.5-debug4/app/release/Screenshot_20260409_164218_bilibili.jpg)
+
 ![image](https://github.com/soinThunder-dot/PopSubsSpeed/blob/2.5-debug4/app/release/Screenshot_20260409_172229_PopSubs.jpg)
 ## Description
 
