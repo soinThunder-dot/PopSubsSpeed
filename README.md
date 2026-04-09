@@ -2,7 +2,7 @@
 
 ## Description
 
-![alt text](https://github.com/soinThunder-dot/PopSubsSpeed/tree/2.5-debug4/app/release/Screenshot_20260409_164218_bilibili.jpg "Logo Title Text 1")
+![image](https://github.com/soinThunder-dot/PopSubsSpeed/tree/2.5-debug4/app/release/Screenshot_20260409_164218_bilibili.jpg "Logo Title Text 1")
 
 
 
