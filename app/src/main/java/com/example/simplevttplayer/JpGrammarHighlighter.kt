@@ -35,9 +35,9 @@ object JpGrammarHighlighter {
         return spannable
     }
 
-    private fun classifyToken(t: Token): TokenClass {
-        val pos = t.partOfSpeech.split("-") // 例如 "名詞-一般-*" 之類
-        val mainPos = pos[0]
+    private fun classifyToken(t: Token): TokenClass {// Kuromoji IPADIC Token 會用逗號分隔 feature：
+        val features = t.allFeatures.split(",") // 例如 "名詞-一般-*" 之類
+        val mainPos = features.getOrNull(0) ?: ""
 
         return when (mainPos) {
             "名詞" -> TokenClass.NOUN
