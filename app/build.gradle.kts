@@ -33,6 +33,12 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    packaging {//這行會告訴打包器：「如果有資源檔叫這個名字，就不要打進 APK」，這樣兩個 jar 的同名檔案就不會衝突了。
+        resources {
+            excludes += "META-INF/CONTRIBUTORS.md"
+            excludes += "META-INF/LICENSE*"
+        }
+    }
 }
 
 dependencies {
