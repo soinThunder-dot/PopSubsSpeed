@@ -46,4 +46,6 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation "org.atilika.kuromoji:kuromoji-ipadic:0.9.0"
 }
