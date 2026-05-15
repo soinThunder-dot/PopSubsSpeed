@@ -1,4 +1,4 @@
-package com.yourapp.jpgrammar
+package com.example.simplevttplayer
 
 import android.graphics.Color
 import android.text.SpannableString
@@ -10,12 +10,14 @@ import org.atilika.kuromoji.Tokenizer
 
 object JpGrammarHighlighter {
 
-    // 全 app 共用一個 tokenizer
+    // 全 app 共用一個 tokenizer（lazy init）
     private val tokenizer: Tokenizer by lazy {
         Tokenizer.builder().build()
     }
 
     fun highlight(line: String): CharSequence {
+        if (line.isBlank()) return line
+
         val tokens: List<Token> = tokenizer.tokenize(line)
         val spannable = SpannableString(line)
 
@@ -28,63 +30,31 @@ object JpGrammarHighlighter {
             val end = start + surface.length
             index = end
 
-            val cls = classifyToken(t)
-            applySpan(spannable, start, end, cls)
+            val mainPos = t.partOfSpeech.split("-")[0] // 取「名詞」「動詞」這一級
+
+            when (mainPos) {
+                "名詞" -> applyUnderline(spannable, start, end, Color.parseColor("#42A5F5"))
+                "動詞" -> applyUnderline(spannable, start, end, Color.parseColor("#FFEE58"))
+                "助詞" -> applyUnderline(spannable, start, end, Color.parseColor("#BA68C8"))
+                "形容詞" -> applyUnderline(spannable, start, end, Color.parseColor("#66BB6A"))
+                else -> { /* 其它不標 */ }
+            }
         }
 
         return spannable
     }
 
-    private fun classifyToken(t: Token): TokenClass {
-        val pos = t.partOfSpeech.split("-")  // 有些實作會用 "-" 連結
-        val mainPos = pos[0]  // 名詞／動詞／形容詞／助詞 等
-
-        return when (mainPos) {
-            "名詞" -> TokenClass.NOUN
-            "動詞" -> TokenClass.VERB
-            "助詞" -> TokenClass.PARTICLE
-            "形容詞" -> TokenClass.ADJECTIVE
-            else -> TokenClass.OTHER
-        }
-    }
-
-    private fun applySpan(spannable: SpannableString, start: Int, end: Int, cls: TokenClass) {
-        when (cls) {
-            TokenClass.NOUN -> {
-                spannable.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(
-                    ForegroundColorSpan(Color.parseColor("#4FC3F7")),
-                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            TokenClass.VERB -> {
-                spannable.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(
-                    ForegroundColorSpan(Color.parseColor("#FFEE58")),
-                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            TokenClass.PARTICLE -> {
-                spannable.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(
-                    ForegroundColorSpan(Color.parseColor("#BA68C8")),
-                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            TokenClass.ADJECTIVE -> {
-                spannable.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(
-                    ForegroundColorSpan(Color.parseColor("#81C784")),
-                    start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            TokenClass.OTHER -> {
-                // 不加底線或顏色
-            }
-        }
-    }
-
-    private enum class TokenClass {
-        NOUN, VERB, PARTICLE, ADJECTIVE, OTHER
+    private fun applyUnderline(spannable: SpannableString, start: Int, end: Int, color: Int) {
+        // 下劃線 + 顏色
+        spannable.setSpan(
+            UnderlineSpan(),
+            start, end,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        spannable.setSpan(
+            ForegroundColorSpan(color),
+            start, end,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
     }
 }
