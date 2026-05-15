@@ -47,5 +47,5 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    implementation "org.atilika.kuromoji:kuromoji-ipadic:0.9.0"
+    implementation("org.atilika.kuromoji:kuromoji-ipadic:0.9.0")
 }
