@@ -15,6 +15,9 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.localbroadcastmanager.content.LocalBroadcastManager // Use LocalBroadcastManager
+
+import com.example.simplevttplayer.JpGrammarHighlighter 
+
 class OverlayService : Service() {
     companion object {
         // These constants MUST match the ones used in MainActivity
@@ -165,7 +168,10 @@ class OverlayService : Service() {
                     Log.d(TAG, "Showing overlay view.")
                     overlayView.visibility = View.VISIBLE
                 }
-                textViewOverlaySubtitle.text = text
+                // ★ 在這一行插入 Kuromoji 高亮處理：
+                val styled: CharSequence = JpGrammarHighlighter.highlight(text)
+                //textViewOverlaySubtitle.text = text
+                textViewOverlaySubtitle.text = styled
             }
         } else {
             Log.w(TAG, "Overlay views not initialized when trying to update text ('$text').")
