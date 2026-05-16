@@ -45,6 +45,8 @@ class MainActivity : AppCompatActivity() {
         private const val ACTION_UPDATE_SUBTITLE_LOCAL = OverlayService.ACTION_UPDATE_SUBTITLE
         private const val EXTRA_SUBTITLE_TEXT_LOCAL = OverlayService.EXTRA_SUBTITLE_TEXT
         private val TAG: String = MainActivity::class.java.simpleName
+        private const val PREFS_NAME = "popsubs_prefs"
+        private const val KEY_LAST_SUBTITLE_URI = "last_subtitle_uri"
     }
 
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
@@ -84,26 +86,45 @@ class MainActivity : AppCompatActivity() {
 
     data class SubtitleCue(val startTimeMs: Long, val endTimeMs: Long, val text: String)
 
-    private val selectSubtitleFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.also { uri ->
-                selectedFileUri = uri
-                val fileName = getFileName(uri)
-                resetPlayback()
-                if (fileName != null) {
-                    textViewFilePath.text = "File: $fileName"
-                    when {
-                        fileName.lowercase().endsWith(".vtt") -> loadAndParseSubtitleFile(uri, "vtt")
-                        fileName.lowercase().endsWith(".srt") -> loadAndParseSubtitleFile(uri, "srt")
-                        else -> {
-                            Toast.makeText(this, "Not VTT/SRT", Toast.LENGTH_SHORT).show()
-                            resetPlaybackStateOnError()
-                        }
-                    }
+    private fun handleSubtitleFileSelected(uri: Uri) {
+        selectedFileUri = uri
+        // 記住最後一次使用的檔案 URI
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().putString(KEY_LAST_SUBTITLE_URI, uri.toString()).apply()
+        val fileName = getFileName(uri)
+        resetPlayback()
+    
+        if (fileName != null) {
+            textViewFilePath.text = "File: $fileName"
+            when {
+                fileName.lowercase().endsWith(".vtt") -> loadAndParseSubtitleFile(uri, "vtt")
+                fileName.lowercase().endsWith(".srt") -> loadAndParseSubtitleFile(uri, "srt")
+                else -> {
+                    Toast.makeText(this, "Not VTT/SRT", Toast.LENGTH_SHORT).show()
+                    resetPlaybackStateOnError()
+                }
+            }
+        } else {
+            Toast.makeText(this, "File name error", Toast.LENGTH_SHORT).show()
+            resetPlaybackStateOnError()
+        }
+    }//然後把你的 selectSubtitleFileLauncher callback 改成呼叫這個函式：
+    private val selectSubtitleFileLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.data?.also { uri ->
+    
+                    // （可選）如果你是用 ACTION_OPEN_DOCUMENT，這裡可以持久化權限
+                    val flags = result.data?.flags ?: 0
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    )
+    
+                    handleSubtitleFileSelected(uri)
                 }
             }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,6 +135,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         buttonSelectFile = findViewById(R.id.buttonSelectFile)
+        buttonReloadLast = findViewById<MaterialButton>(R.id.buttonReloadLastFile)//new新增「Reload last file」按鈕點擊邏輯
         textViewFilePath = findViewById(R.id.textViewFilePath)
         textViewCurrentTime = findViewById(R.id.textViewCurrentTime)
         textViewSubtitle = findViewById(R.id.textViewSubtitle)
@@ -125,7 +147,18 @@ class MainActivity : AppCompatActivity() {
         textViewYellowTime = findViewById(R.id.textViewYellowTime)
         editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize)
 
-        buttonSelectFile.setOnClickListener { openFilePicker() }
+        buttonSelectFile.setOnClickListener {
+            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            val uriString = prefs.getString(KEY_LAST_SUBTITLE_URI, null)
+    
+            if (uriString.isNullOrEmpty()) {
+                Toast.makeText(this, "No last file to reload.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+    
+            val uri = Uri.parse(uriString)
+            handleSubtitleFileSelected(uri)
+        }
         buttonPlayPause.setOnClickListener { togglePlayPause() }
         buttonReset.setOnClickListener { resetPlayback() }
 
