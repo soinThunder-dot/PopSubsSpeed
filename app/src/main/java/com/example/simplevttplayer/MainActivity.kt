@@ -111,21 +111,25 @@ class MainActivity : AppCompatActivity() {
         }
     }//然後把你的 selectSubtitleFileLauncher callback 改成呼叫這個函式：
     private val selectSubtitleFileLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                result.data?.data?.also { uri ->
-    
-                    // （可選）如果你是用 ACTION_OPEN_DOCUMENT，這裡可以持久化權限
+    registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.also { uri ->
+
+                // 持久化權限，用 try-catch 包住避免 SecurityException 中斷流程
+                try {
                     val flags = result.data?.flags ?: 0
                     contentResolver.takePersistableUriPermission(
                         uri,
-                        flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        flags and Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
-    
-                    handleSubtitleFileSelected(uri)
+                } catch (e: SecurityException) {
+                    // 權限無法持久化，忽略，繼續載入
                 }
+
+                handleSubtitleFileSelected(uri)
             }
         }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -412,7 +416,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFilePicker() {
-        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "*/*" }
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("text/vtt", "application/x-subrip", "text/plain")
+            )
+        }
         selectSubtitleFileLauncher.launch(i)
     }
 }
