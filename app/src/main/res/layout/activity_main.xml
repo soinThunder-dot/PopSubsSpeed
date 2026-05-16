@@ -9,6 +9,15 @@
     tools:context=".MainActivity">
 
     <!-- 浮窗字體大小控制框（上揉右側） -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/buttonReloadLastFile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|left"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:text="Reload last file" />
+    
     <EditText
         android:id="@+id/editTextOverlayFontSize"
         android:layout_width="70dp"
@@ -33,7 +42,7 @@
         android:layout_marginTop="8dp"
         android:text="No file selected"
         android:textAppearance="?attr/textAppearanceCaption" />
-
+    
     <!-- Speed Control Section -->
     <LinearLayout
         android:layout_width="match_parent"
