@@ -266,12 +266,12 @@
                     android:layout_width="8dp"
                     android:layout_height="8dp"
                     android:layout_marginEnd="4dp"
-                    android:background="#FF9800" />
+                    android:background="#FFEB3B" />
     
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="名詞 固有 / N-Prop"
+                    android:text="本動詞 / V-Main"
                     android:textSize="10sp" />
             </LinearLayout>
 
@@ -355,7 +355,16 @@
                     android:text="副詞 / Adv"
                     android:textSize="10sp" />
             </LinearLayout>
-
+        </LinearLayout>
+        
+    
+        <!-- 右欄：11~20 類 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+    
             <!-- 11. 格助詞 / P-Case -->
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -554,118 +563,10 @@
                     android:layout_height="wrap_content"
                     android:text="記號等 / Sym"
                     android:textSize="10sp" />
+    
             </LinearLayout>
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="2dp">
-    
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="4dp"
-                    android:background="#FF9800" />
-    
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="名詞 固有 / N-Prop"
-                    android:textSize="10sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="2dp">
-    
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="4dp"
-                    android:background="#FF9800" />
-    
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="名詞 固有 / N-Prop"
-                    android:textSize="10sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="2dp">
-    
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="4dp"
-                    android:background="#FF9800" />
-    
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="名詞 固有 / N-Prop"
-                    android:textSize="10sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="2dp">
-    
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="4dp"
-                    android:background="#FF9800" />
-    
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="名詞 固有 / N-Prop"
-                    android:textSize="10sp" />
-            </LinearLayout>
-
-            
+        
         </LinearLayout>
-    
-        <!-- 右欄：11~20 類 -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-    
-            <!-- 11. 格助詞 / P-Case -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="2dp">
-    
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="4dp"
-                    android:background="#03A9F4" />
-    
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="格助詞 / P-Case"
-                    android:textSize="10sp" />
-            </LinearLayout>
-    
-            <!-- 12~20 類：同樣 pattern 填滿右欄 -->
-    
-        </LinearLayout>
-    
-    </LinearLayout>
 
 
 
