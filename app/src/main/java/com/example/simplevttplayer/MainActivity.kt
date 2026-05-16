@@ -153,6 +153,9 @@ class MainActivity : AppCompatActivity() {
         editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize)
 
         buttonSelectFile.setOnClickListener {
+            openFilePicker ()
+        }
+        buttonReloadLast.setOnClickListener {
             val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val uriString = prefs.getString(KEY_LAST_SUBTITLE_URI, null)
     
