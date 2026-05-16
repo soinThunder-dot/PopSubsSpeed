@@ -144,11 +144,10 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="15dp"
-        <!--android:layout_marginTop="30dp"-->
         android:enabled="false"
         android:text="Toggle Overlay Visibility"
         android:visibility="visible" />
-
+        <!--android:layout_marginTop="30dp"-->
 
 
     <!-- 20 類詞性顏色 legend：2 欄 × 10 行 -->
