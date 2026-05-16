@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var buttonSelectFile: MaterialButton
+    private lateinit var buttonReloadLast: MaterialButton
     private lateinit var textViewFilePath: TextView
     private lateinit var textViewCurrentTime: TextView
     private lateinit var textViewSubtitle: TextView
