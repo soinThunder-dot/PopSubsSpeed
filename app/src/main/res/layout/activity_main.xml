@@ -572,6 +572,6 @@
                     android:text="記號等 / Sym"
                     android:textSize="10sp" />
             </LinearLayout><!-- 關閉20-->   
-        </LinearLayout><!-- 關閉LEFT->  
+        </LinearLayout><!-- 關閉LEFT-->  
     </LinearLayout>  <!-- 關閉 id=legendGrid 的最外層 LinearLayout -->    
 </LinearLayout>
