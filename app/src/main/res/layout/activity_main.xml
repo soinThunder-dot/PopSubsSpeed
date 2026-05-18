@@ -34,7 +34,7 @@
         android:layout_height="wrap_content"
         android:text="JAP"
         android:textSize="12sp"
-        android:textColor="#4CAF50"   <!-- 綠色 = 開啟 -->
+        android:textColor="#4CAF50"
         android:padding="4dp" />
     <EditText
         android:id="@+id/editTextOverlayFontSize"
