@@ -96,6 +96,8 @@ class MainActivity : AppCompatActivity() {
         // 記住最後一次使用的檔案 URI
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putString(KEY_LAST_SUBTITLE_URI, uri.toString()).apply()
+        subtitleCues = emptyList()// ★ 清空舊字幕 & 播放狀態
+        resetPlayback()
         val fileName = getFileName(uri)
         resetPlayback()
     
@@ -386,7 +388,9 @@ class MainActivity : AppCompatActivity() {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
-    private fun resetPlayback() {
+    private fun resetPlayback() {    
+        handler.removeCallbacks(updateRunnable)   // ★ 停掉舊的 runnable
+
         pausePlayback(); pausedElapsedTimeMillis = 0L; startTimeNanos = 0L
         textViewSubtitle.text = "[Ready to play]"; textViewCurrentTime.text = formatTime(0)
         textViewYellowTime.text = formatTime(0); sliderPlayback.value = 0.0f; sendSubtitleUpdate("")
