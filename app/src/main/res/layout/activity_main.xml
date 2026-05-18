@@ -27,7 +27,15 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1" />
-
+  <!-- JAP 切換：點擊開關 Kuromoji 高亮 -->
+    <TextView
+        android:id="@+id/textViewJpToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="JAP"
+        android:textSize="12sp"
+        android:textColor="#4CAF50"   <!-- 綠色 = 開啟 -->
+        android:padding="4dp" />
     <EditText
         android:id="@+id/editTextOverlayFontSize"
         android:layout_width="70dp"
