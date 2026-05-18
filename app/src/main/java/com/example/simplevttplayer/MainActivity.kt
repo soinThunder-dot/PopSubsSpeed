@@ -9,6 +9,7 @@
  */
 package com.example.simplevttplayer // **<<< CHECK THIS LINE CAREFULLY!**
 import android.annotation.SuppressLint
+import android.graphics.Color
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
