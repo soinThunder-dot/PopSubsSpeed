@@ -9,14 +9,22 @@ import com.atilika.kuromoji.ipadic.Token
 import com.atilika.kuromoji.ipadic.Tokenizer
 
 object JpGrammarHighlighter {
-
+    var enabled: Boolean = 0
     // 全 app 共用一個 Tokenizer 實例
     private val tokenizer: Tokenizer by lazy {
         Tokenizer()
     }
 
     fun highlight(line: String): CharSequence {
+        if (!enabled) return line   // 開關關掉就原樣顯示
+        val hasJapanese = line.any { ch ->// 如果沒有日文就直接 return
+            (ch.code in 0x3040..0x30FF) ||  // 假名
+            (ch.code in 0x4E00..0x9FFF)     // 漢字
+        }
+        if (!hasJapanese) return line
+        
         val tokens: List<Token> = tokenizer.tokenize(line)
+        if (tokens.isEmpty()) return line
         val spannable = SpannableString(line)
 
         var index = 0
