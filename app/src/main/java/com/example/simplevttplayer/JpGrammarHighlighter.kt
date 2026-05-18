@@ -9,7 +9,7 @@ import com.atilika.kuromoji.ipadic.Token
 import com.atilika.kuromoji.ipadic.Tokenizer
 
 object JpGrammarHighlighter {
-    var enabled: Boolean = 0
+    var enabled: Boolean = false
     // 全 app 共用一個 Tokenizer 實例
     private val tokenizer: Tokenizer by lazy {
         Tokenizer()
