@@ -65,16 +65,20 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var buttonSelectFile: MaterialButton
     private lateinit var buttonReloadLast: MaterialButton
-    private lateinit var textViewFilePath: TextView
-    private lateinit var textViewCurrentTime: TextView
-    private lateinit var textViewSubtitle: TextView
     private lateinit var buttonPlayPause: MaterialButton
     private lateinit var buttonReset: MaterialButton
     private lateinit var buttonLaunchOverlay: MaterialButton
+    
+    private lateinit var textViewFilePath: TextView
+    private lateinit var textViewCurrentTime: TextView
+    private lateinit var textViewSubtitle: TextView
     private lateinit var sliderPlayback: Slider
     private lateinit var spinnerSpeed: Spinner
     private lateinit var textViewYellowTime: TextView
     private lateinit var editTextOverlayFontSize: android.widget.EditText
+
+    private lateinit var textViewJpToggle: TextView
+    private var kuromojiEnabled: Boolean = true
 
     private var subtitleCues: List<SubtitleCue> = emptyList()
     private var selectedFileUri: Uri? = null
@@ -138,7 +142,8 @@ class MainActivity : AppCompatActivity() {
         overlayPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (checkOverlayPermission()) startOverlayService()
         }
-
+        textViewJpToggle = findViewById(R.id.textViewJpToggle)
+        
         buttonSelectFile = findViewById(R.id.buttonSelectFile)
         buttonReloadLast = findViewById<MaterialButton>(R.id.buttonReloadLastFile)//new新增「Reload last file」按鈕點擊邏輯
         textViewFilePath = findViewById(R.id.textViewFilePath)
@@ -169,7 +174,22 @@ class MainActivity : AppCompatActivity() {
         }
         buttonPlayPause.setOnClickListener { togglePlayPause() }
         buttonReset.setOnClickListener { resetPlayback() }
-
+        
+        // 更新顯示顏色的 helper
+        fun updateJpToggleUi() {
+            textViewJpToggle.setTextColor(
+                if (kuromojiEnabled) Color.parseColor("#4CAF50")   // ON = 綠
+                else Color.parseColor("#9E9E9E")                   // OFF = 灰
+            )
+        }
+        updateJpToggleUi()
+        textViewJpToggle.setOnClickListener {
+            kuromojiEnabled = !kuromojiEnabled
+            JpGrammarHighlighter.enabled = kuromojiEnabled   // 同步給 highlighter
+            updateJpToggleUi()
+            sendSubtitleUpdate(textViewSubtitle.text.toString())// 如果想刷新字幕，也可以在這裡重發一次字幕文字
+        }
+        
         editTextOverlayFontSize.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
