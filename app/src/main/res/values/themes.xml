@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.PopSubs" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.PopSubs" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/pops_blue_primary</item>
         <item name="colorPrimaryVariant">@color/pops_blue_dark</item>
         <item name="colorOnPrimary">@color/pops_onPrimary</item>
