@@ -1,5 +1,4 @@
-package com.example.simplevttplayer
-
+package com.example.simplevttplayer // **IMPORTANT: Adjust package name if needed!**
 import android.app.Service
 import android.widget.Toast
 import android.content.BroadcastReceiver
@@ -15,63 +14,38 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.example.simplevttplayer.JpGrammarHighlighter
-import android.widget.Spinner
-import android.widget.ArrayAdapter
-import android.widget.AdapterView
-import android.widget.SeekBar
-import android.widget.EditText
+import androidx.localbroadcastmanager.content.LocalBroadcastManager // Use LocalBroadcastManager
+
+import com.example.simplevttplayer.JpGrammarHighlighter 
 
 class OverlayService : Service() {
     companion object {
+        // These constants MUST match the ones used in MainActivity
         const val ACTION_UPDATE_SUBTITLE = "com.example.simplevttplayer.UPDATE_SUBTITLE"
         const val EXTRA_SUBTITLE_TEXT = "subtitle_text"
-        const val ACTION_PAUSE_PLAY = "com.example.simplevttplayer.PAUSE_PLAY"
-        const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION"
+        const val ACTION_PAUSE_PLAY = "com.example.simplevttplayer.PAUSE_PLAY" 
+        const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION" // ✅ 新增重置 action
         const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
         const val EXTRA_FONT_SIZE = "font_size"
         
         val TAG: String = OverlayService::class.java.simpleName
     }
-    
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
     private lateinit var textViewOverlaySubtitle: TextView
-    private lateinit var params: WindowManager.LayoutParams
-    private var isPaused = false
-    
-    // 2.8: Control panel views
-    private lateinit var controlPanel: View
-    private lateinit var overlaySpinnerSpeed: Spinner
-    private lateinit var overlaySeekBar: SeekBar
-    private lateinit var overlayTextTime: TextView
-    private lateinit var overlayEditFontSize: EditText
-    
-    // 2.8: Three copy overlays (top-left, center, top-right)
-    private lateinit var copyOverlayLeftView: View
-    private lateinit var copyOverlayCenterView: View
-    private lateinit var copyOverlayRightView: View
-    private lateinit var copyTextLeft: TextView
-    private lateinit var copyTextCenter: TextView
-    private lateinit var copyTextRight: TextView
-    private lateinit var paramsLeft: WindowManager.LayoutParams
-    private lateinit var paramsCenter: WindowManager.LayoutParams
-    private lateinit var paramsRight: WindowManager.LayoutParams
-    
-    private var currentSubtitle = ""
-    private var currentFontSize = 20
-    
+    private lateinit var params: WindowManager.LayoutParams 
+    private var isPaused = false // Track pause state
+    // Listens for broadcasts from MainActivity containing subtitle text
     private val subtitleUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.d(TAG, "Broadcast received! Action: ${intent?.action}")
+            Log.d(TAG, "Broadcast received! Action: ${intent?.action}") // ✅ 加 Log 確認收到
             when (intent?.action) {
                 ACTION_UPDATE_SUBTITLE -> {
                     val subtitleText = intent.getStringExtra(EXTRA_SUBTITLE_TEXT) ?: ""
                     Log.d(TAG, "Received subtitle broadcast: '$subtitleText'")
                     updateSubtitleText(subtitleText)
                 }
-                ACTION_RESET_OVERLAY_POSITION -> {
+                ACTION_RESET_OVERLAY_POSITION -> { // ✅ 新增重置邏輯
                     Log.d(TAG, "Received reset overlay position request")
                     resetOverlayPosition()
                 }
@@ -86,70 +60,41 @@ class OverlayService : Service() {
             }
         }
     }
-    
     override fun onBind(intent: Intent?): IBinder? {
+        // Not using binding, so return null
         return null
     }
-    
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "OverlayService onCreate")
         try {
+            // Inflate the overlay layout
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)
             
-            // 2.8: Get control panel views
-            controlPanel = overlayView.findViewById(R.id.controlPanel)
-            overlaySpinnerSpeed = overlayView.findViewById(R.id.overlaySpinnerSpeed)
-            overlaySeekBar = overlayView.findViewById(R.id.overlaySeekBar)
-            overlayTextTime = overlayView.findViewById(R.id.overlayTextTime)
-            overlayEditFontSize = overlayView.findViewById(R.id.overlayEditFontSize)
-            
-            // 2.8: Setup speed spinner
-            setupOverlaySpeedSpinner()
-            
-            // 2.8: Setup seekbar listener
-            overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    if (fromUser) {
-                        // Update time display - this would need MainActivity coordination
-                        overlayTextTime.text = formatTime(progress.toLong())
-                    }
-                }
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-                override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                    // Notify MainActivity of seek position change
-                }
-            })
-            
-            // 2.8: Setup font size EditText
-            overlayEditFontSize.addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                override fun afterTextChanged(s: android.text.Editable?) {
-                    val fontSize = s?.toString()?.toIntOrNull() ?: 20
-                    currentFontSize = fontSize
-                    updateOverlayFontSize(fontSize)
-                    // Notify MainActivity
-                    val intent = Intent(ACTION_UPDATE_FONT_SIZE)
-                    intent.putExtra(EXTRA_FONT_SIZE, fontSize)
-                    LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
-                }
-            })
-            
+            // Set click listener on subtitle to toggle pause
             textViewOverlaySubtitle.setOnClickListener {
                 Log.d(TAG, "Subtitle clicked - toggle pause!")
                 togglePauseFromOverlay()
             }
             
             val buttonMoveUp: View? = overlayView.findViewById(R.id.buttonMoveUp)
-            buttonMoveUp?.setOnClickListener {
-                Log.d(TAG, "Move up button clicked!")
-                moveOverlayUpByButtonClick()
+            if (buttonMoveUp != null) {
+                buttonMoveUp.setOnClickListener {
+                    Log.d(TAG, "Move up button clicked!")
+                    moveOverlayUpByButtonClick()
+                }
+                Log.d(TAG, "Move up button listener set successfully")
+            } else {
+                Log.w(TAG, "buttonMoveUp is null! Check overlay_layout.xml IDs")
             }
             
+            // ✅ 把下面這些都移進來！
+            
+            // Get WindowManager service
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
             
+            // Define layout parameters for the overlay window
             val layoutFlag: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -167,17 +112,16 @@ class OverlayService : Service() {
                 y = 0
             }
             
+            // Add the view to the window manager
             windowManager.addView(overlayView, params)
             Log.d(TAG, "Overlay view added successfully.")
             
-            // 2.8: Create 3 copy overlays at top positions
-            create3CopyOverlays(layoutFlag)
-            
+            // Register the broadcast receiver using LocalBroadcastManager
             val filter = IntentFilter().apply {
-                addAction(ACTION_UPDATE_SUBTITLE)
-                addAction(ACTION_PAUSE_PLAY)
-                addAction(ACTION_RESET_OVERLAY_POSITION)
-                addAction(ACTION_UPDATE_FONT_SIZE)
+                addAction(ACTION_UPDATE_SUBTITLE) // ✅ 用 companion 中定義的常數
+                addAction(ACTION_PAUSE_PLAY) // ✅ 用 companion 中定義的常數
+                addAction(ACTION_RESET_OVERLAY_POSITION) // ✅ 新增重置
+                addAction(ACTION_UPDATE_FONT_SIZE) // 浮窗字體大小更新
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter)
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
@@ -188,98 +132,10 @@ class OverlayService : Service() {
             stopSelf()
         }
     }
-    
-    private fun setupOverlaySpeedSpinner() {
-        val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        overlaySpinnerSpeed.adapter = adapter
-        overlaySpinnerSpeed.setSelection(2) // Default 1.0x
-        
-        overlaySpinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                // Notify MainActivity of speed change would go here
-                Log.d(TAG, "Speed changed to position: $position")
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-    }
-    
-    private fun create3CopyOverlays(layoutFlag: Int) {
-        try {
-            // Top-Left copy
-            copyOverlayLeftView = LayoutInflater.from(this).inflate(
-                android.R.layout.simple_list_item_1, null
-            )
-            copyTextLeft = copyOverlayLeftView.findViewById(android.R.id.text1)
-            copyTextLeft.textSize = currentFontSize.toFloat()
-            copyTextLeft.setTextColor(android.graphics.Color.WHITE)
-            
-            paramsLeft = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.START
-                x = 20
-                y = 100
-            }
-            windowManager.addView(copyOverlayLeftView, paramsLeft)
-            
-            // Top-Center copy
-            copyOverlayCenterView = LayoutInflater.from(this).inflate(
-                android.R.layout.simple_list_item_1, null
-            )
-            copyTextCenter = copyOverlayCenterView.findViewById(android.R.id.text1)
-            copyTextCenter.textSize = currentFontSize.toFloat()
-            copyTextCenter.setTextColor(android.graphics.Color.WHITE)
-            
-            paramsCenter = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                y = 100
-            }
-            windowManager.addView(copyOverlayCenterView, paramsCenter)
-            
-            // Top-Right copy
-            copyOverlayRightView = LayoutInflater.from(this).inflate(
-                android.R.layout.simple_list_item_1, null
-            )
-            copyTextRight = copyOverlayRightView.findViewById(android.R.id.text1)
-            copyTextRight.textSize = currentFontSize.toFloat()
-            copyTextRight.setTextColor(android.graphics.Color.WHITE)
-            
-            paramsRight = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.END
-                x = 20
-                y = 100
-            }
-            windowManager.addView(copyOverlayRightView, paramsRight)
-            
-            Log.d(TAG, "3 copy overlays created successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error creating 3 copy overlays", e)
-        }
-    }
-    
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "OverlayService onStartCommand Received")
         return START_NOT_STICKY
     }
-    
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "OverlayService onDestroy")
@@ -287,20 +143,11 @@ class OverlayService : Service() {
             if (::overlayView.isInitialized && overlayView.isAttachedToWindow) {
                 windowManager.removeView(overlayView)
                 Log.d(TAG, "Overlay view removed.")
-            }
-            
-            // Remove 3 copy overlays
-            if (::copyOverlayLeftView.isInitialized && copyOverlayLeftView.isAttachedToWindow) {
-                windowManager.removeView(copyOverlayLeftView)
-            }
-            if (::copyOverlayCenterView.isInitialized && copyOverlayCenterView.isAttachedToWindow) {
-                windowManager.removeView(copyOverlayCenterView)
-            }
-            if (::copyOverlayRightView.isInitialized && copyOverlayRightView.isAttachedToWindow) {
-                windowManager.removeView(copyOverlayRightView)
+            } else {
+                Log.d(TAG, "Overlay view not attached or not initialized, no removal needed.")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error removing overlay views", e)
+            Log.e(TAG, "Error removing overlay view", e)
         }
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(subtitleUpdateReceiver)
@@ -309,38 +156,27 @@ class OverlayService : Service() {
             Log.w(TAG, "Receiver possibly already unregistered or not registered.", e)
         }
     }
-    
     private fun updateSubtitleText(text: String) {
         if (::textViewOverlaySubtitle.isInitialized && ::overlayView.isInitialized) {
-            currentSubtitle = text
             if (text.isBlank()) {
                 if (overlayView.visibility != View.GONE) {
                     Log.d(TAG, "Hiding overlay view (blank text received).")
+                    //***********overlayView.visibility = View.GONE
                 }
             } else {
                 if (overlayView.visibility != View.VISIBLE) {
                     Log.d(TAG, "Showing overlay view.")
                     overlayView.visibility = View.VISIBLE
                 }
+                // ★ 在這一行插入 Kuromoji 高亮處理：
                 val styled: CharSequence = JpGrammarHighlighter.highlight(text)
+                //textViewOverlaySubtitle.text = text
                 textViewOverlaySubtitle.text = styled
-                
-                // 2.8: Update 3 copy overlays
-                if (::copyTextLeft.isInitialized) {
-                    copyTextLeft.text = styled
-                }
-                if (::copyTextCenter.isInitialized) {
-                    copyTextCenter.text = styled
-                }
-                if (::copyTextRight.isInitialized) {
-                    copyTextRight.text = styled
-                }
             }
         } else {
             Log.w(TAG, "Overlay views not initialized when trying to update text ('$text').")
         }
     }
-    
     private fun togglePauseFromOverlay() {
         isPaused = !isPaused
         
@@ -351,12 +187,6 @@ class OverlayService : Service() {
         
         updateSubtitlePauseState()
         
-        // 2.8: Show/hide control panel on pause/resume
-        if (::controlPanel.isInitialized) {
-            controlPanel.visibility = if (isPaused) View.VISIBLE else View.GONE
-            Log.d(TAG, "Control panel visibility: ${if (isPaused) "VISIBLE" else "GONE"}")
-        }
-        
         Toast.makeText(this, if (isPaused) "Paused" else "Resumed", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "Pause toggled from overlay: isPaused=$isPaused")
     }
@@ -366,7 +196,6 @@ class OverlayService : Service() {
         textViewOverlaySubtitle.setTextColor(textColor)
         Log.d(TAG, "Updated subtitle color: isPaused=$isPaused, color=${if (isPaused) "RED" else "WHITE"}")
     }
-    
     private fun moveOverlayUpByButtonClick() {
         if (::params.isInitialized && ::overlayView.isInitialized) {
             val moveDistance = 36
@@ -396,28 +225,12 @@ class OverlayService : Service() {
             Log.w(TAG, "Cannot move overlay: views not initialized")
         }
     }
-    
     private fun updateOverlayFontSize(fontSize: Int) {
-        currentFontSize = fontSize
         if (::textViewOverlaySubtitle.isInitialized) {
             textViewOverlaySubtitle.textSize = fontSize.toFloat()
             Log.d(TAG, "Overlay font size updated to: $fontSize")
+        } else {
+            Log.w(TAG, "Cannot update font size: textViewOverlaySubtitle not initialized")
         }
-        
-        // 2.8: Update 3 copy overlays font size
-        if (::copyTextLeft.isInitialized) {
-            copyTextLeft.textSize = fontSize.toFloat()
-        }
-        if (::copyTextCenter.isInitialized) {
-            copyTextCenter.textSize = fontSize.toFloat()
-        }
-        if (::copyTextRight.isInitialized) {
-            copyTextRight.textSize = fontSize.toFloat()
-        }
-    }
-    
-    private fun formatTime(ms: Long): String {
-        val s = ms / 1000
-        return String.format("%02d:%02d.%03d", s / 60, s % 60, ms % 1000)
     }
 }
