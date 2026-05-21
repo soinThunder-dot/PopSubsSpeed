@@ -63,6 +63,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    private val overlayControlReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                OverlayService.ACTION_OVERLAY_SPEED_CHANGE -> {
+                    val position = intent.getIntExtra("speed_position", 2)
+                    spinnerSpeed.setSelection(position)// spinnerSpeed 的 listener 會自動處理 playbackSpeed 更新
+                }
+                OverlayService.ACTION_OVERLAY_SEEK -> {
+                    val seekToMs = intent.getLongExtra("seek_to_ms", 0L)
+                    pausedElapsedTimeMillis = seekToMs
+                    startTimeNanos = System.nanoTime() - (seekToMs * 1_000_000)
+                    sliderPlayback.value = seekToMs.toFloat()
+                }
+            }
+        }
+    }
 
     private lateinit var buttonSelectFile: MaterialButton
     private lateinit var buttonReloadLast: MaterialButton
@@ -220,6 +236,11 @@ class MainActivity : AppCompatActivity() {
 
         val pausePlayFilter = android.content.IntentFilter(OverlayService.ACTION_PAUSE_PLAY)
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayPausePlayReceiver, pausePlayFilter)
+        val overlayControlFilter = IntentFilter().apply {
+            addAction(OverlayService.ACTION_OVERLAY_SPEED_CHANGE)
+            addAction(OverlayService.ACTION_OVERLAY_SEEK)
+        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
     }
 
     private fun setupSliderListener() {
@@ -421,6 +442,9 @@ class MainActivity : AppCompatActivity() {
             if (!sliderPlayback.isPressed && eR.toFloat() <= sliderPlayback.valueTo) sliderPlayback.value = eR.toFloat()
             val cue = findCueForTime((eR * playbackSpeed).toLong())  // ✅ 這樣字幕查詢才會根據速度調整後的時間去比對
             val nT = cue?.text ?: ""
+            val intent = Intent(OverlayService.ACTION_UPDATE_TIME)// ✅ 加這個：通知 Overlay 更新時間
+            intent.putExtra("current_time_ms", eR)
+            LocalBroadcastManager.getInstance(this@MainActivity).sendBroadcast(intent)//  >
             if (textViewSubtitle.text != nT) { textViewSubtitle.text = nT; sendSubtitleUpdate(nT) }
             //if (subtitleCues.isNotEmpty() && eR >= subtitleCues.last().endTimeMs) {
                 //pausePlayback(); textViewSubtitle.text = "[Playback Finished]"; sendSubtitleUpdate("[Playback Finished]")
