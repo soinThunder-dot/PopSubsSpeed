@@ -118,6 +118,14 @@ class OverlayService : Service() {
             
             // SeekBar 改變時 → 通知 MainActivity
             overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        overlayTextTime.text = formatTime(progress.toLong())
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                    // ❌ 目前缺少這個 - 應該暫停播放或通知 MainActivity
+                }
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {
                     val intent = Intent(ACTION_OVERLAY_SEEK)
                     intent.putExtra("seek_to_ms", seekBar?.progress?.toLong() ?: 0L)
@@ -181,6 +189,7 @@ class OverlayService : Service() {
                 addAction(ACTION_PAUSE_PLAY)
                 addAction(ACTION_RESET_OVERLAY_POSITION)
                 addAction(ACTION_UPDATE_FONT_SIZE)
+                addAction(ACTION_UPDATE_TIME) // ✅ 加這個
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter)
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
@@ -201,8 +210,10 @@ class OverlayService : Service() {
         
         overlaySpinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                // Notify MainActivity of speed change would go here
-                Log.d(TAG, "Speed changed to position: $position")
+                Log.d(TAG, "Speed changed to position: $position")// Notify MainActivity of speed change would go here
+                val intent = Intent(ACTION_OVERLAY_SPEED_CHANGE)// ✅ 需要加：發送 broadcast 給 MainActivity
+                intent.putExtra("speed_position", position)
+                LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
