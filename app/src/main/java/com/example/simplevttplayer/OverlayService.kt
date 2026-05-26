@@ -44,6 +44,10 @@ class OverlayService : Service() {
     
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
+            
+        // 2.8: Foreground service notification constants
+        private const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"
+        private const val NOTIFICATION_ID = 1001
     private lateinit var textViewOverlaySubtitle: TextView
     private lateinit var params: WindowManager.LayoutParams
     private var isPaused = false
