@@ -225,7 +225,8 @@ class OverlayService : Service() {
     }
     
     override fun onDestroy() {
-        super.onDestroy()
+        super.onDestroy()    
+        autoSaveHandler.removeCallbacks(autoSaveRunnable)  // 2.8: 停止定期儲存
         Log.d(TAG, "OverlayService onDestroy")
         try {
             if (::overlayView.isInitialized && overlayView.isAttachedToWindow) {
