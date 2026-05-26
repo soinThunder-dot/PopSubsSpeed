@@ -48,6 +48,8 @@ class MainActivity : AppCompatActivity() {
         private val TAG: String = MainActivity::class.java.simpleName
         private const val PREFS_NAME = "popsubs_prefs"
         private const val KEY_LAST_SUBTITLE_URI = "last_subtitle_uri"
+        private const val KEY_LAST_TIMESTAMP = "last_timestamp_ms"  // 原始時間（未受速度影響）
+        private const val AUTO_SAVE_INTERVAL_MS = 180_000L  // 3 分鐘 = 180 秒
     }
 
     private lateinit var overlayPermissionLauncher: ActivityResultLauncher<Intent>
@@ -96,7 +98,13 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var textViewJpToggle: TextView
     private var kuromojiEnabled: Boolean = true
-
+    private val autoSaveHandler = Handler(Looper.getMainLooper())  // 2.8: 定期儲存 Handler
+    private val autoSaveRunnable = object : Runnable {  // 2.8: 每 3 分鐘儲存時間戳記
+        override fun run() {
+            saveCurrentTimestamp()
+            autoSaveHandler.postDelayed(this, AUTO_SAVE_INTERVAL_MS)
+        }
+    }
     private var subtitleCues: List<SubtitleCue> = emptyList()
     private var selectedFileUri: Uri? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -109,8 +117,7 @@ class MainActivity : AppCompatActivity() {
     data class SubtitleCue(val startTimeMs: Long, val endTimeMs: Long, val text: String)
 
     private fun handleSubtitleFileSelected(uri: Uri) {
-        selectedFileUri = uri
-        // 記住最後一次使用的檔案 URI
+        selectedFileUri = uri// 記住最後一次使用的檔案 URI
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putString(KEY_LAST_SUBTITLE_URI, uri.toString()).apply()
         subtitleCues = emptyList()// ★ 清空舊字幕 & 播放狀態
@@ -136,9 +143,7 @@ class MainActivity : AppCompatActivity() {
     private val selectSubtitleFileLauncher =
     registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.also { uri ->
-
-                // 持久化權限，用 try-catch 包住避免 SecurityException 中斷流程
+            result.data?.data?.also { uri ->// 持久化權限，用 try-catch 包住避免 SecurityException 中斷流程
                 try {
                     val flags = result.data?.flags ?: 0
                     contentResolver.takePersistableUriPermission(
@@ -182,14 +187,20 @@ class MainActivity : AppCompatActivity() {
         buttonReloadLast.setOnClickListener {
             val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val uriString = prefs.getString(KEY_LAST_SUBTITLE_URI, null)
-    
             if (uriString.isNullOrEmpty()) {
                 Toast.makeText(this, "No last file to reload.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-    
             val uri = Uri.parse(uriString)
             handleSubtitleFileSelected(uri)
+            val savedTimestamp = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)// 2.8: 恢復上次儲存的時間戳記
+            if (saved Timestamp > 0L && subtitleCues.isNotEmpty()) {
+                pausedElapsedTimeMillis = savedTimestamp
+                sliderPlayback.value = savedTimestamp.toFloat()
+                textViewYellowTime.text = formatTime(savedTimestamp)
+                textViewCurrentTime.text = formatTime((savedTimestamp * playbackSpeed).toLong())
+                Toast.makeText(this, "已恢復至 ${formatTime(savedTimestamp)}", Toast.LENGTH_SHORT).show()
+            }
         }
         buttonPlayPause.setOnClickListener { togglePlayPause() }
         buttonReset.setOnClickListener { resetPlayback() }
@@ -264,6 +275,13 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun saveCurrentTimestamp() {
+        if (!isPlaying && pausedElapsedTimeMillis == 0L) return  // 未播放過則不儲存
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().putLong(KEY_LAST_TIMESTAMP, pausedElapsedTimeMillis).apply()
+        Log.d(TAG, "Auto-saved timestamp: ${formatTime(pausedElapsedTimeMillis)}")
+    }
+    
     private fun setupSpeedSpinner() {
         val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
@@ -396,6 +414,8 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
         handler.post(updateRunnable)
+        autoSaveHandler.removeCallbacks(autoSaveRunnable)// 2.8: 啟動自動儲存
+        autoSaveHandler.postDelayed(autoSaveRunnable, AUTO_SAVE_INTERVAL_MS)
         val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", false) }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
@@ -406,6 +426,8 @@ class MainActivity : AppCompatActivity() {
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         pausedElapsedTimeMillis = (System.nanoTime() - startTimeNanos) / 1_000_000
         handler.removeCallbacks(updateRunnable)
+        autoSaveHandler.removeCallbacks(autoSaveRunnable)// 2.8: 停止自動儲存並立即儲存一次
+        saveCurrentTimestamp()
         val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", true) }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
