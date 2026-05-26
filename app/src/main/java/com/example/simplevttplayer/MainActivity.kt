@@ -194,7 +194,7 @@ class MainActivity : AppCompatActivity() {
             val uri = Uri.parse(uriString)
             handleSubtitleFileSelected(uri)
             val savedTimestamp = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)// 2.8: 恢復上次儲存的時間戳記
-            if (saved Timestamp > 0L && subtitleCues.isNotEmpty()) {
+            if (savedTimestamp > 0L && subtitleCues.isNotEmpty()) {
                 pausedElapsedTimeMillis = savedTimestamp
                 sliderPlayback.value = savedTimestamp.toFloat()
                 textViewYellowTime.text = formatTime(savedTimestamp)
@@ -247,7 +247,7 @@ class MainActivity : AppCompatActivity() {
 
         val pausePlayFilter = android.content.IntentFilter(OverlayService.ACTION_PAUSE_PLAY)
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayPausePlayReceiver, pausePlayFilter)
-        val overlayControlFilter = IntentFilter().apply {
+        val overlayControlFilter = android.content.IntentFilter().apply {
             addAction(OverlayService.ACTION_OVERLAY_SPEED_CHANGE)
             addAction(OverlayService.ACTION_OVERLAY_SEEK)
         }
@@ -279,7 +279,7 @@ class MainActivity : AppCompatActivity() {
         if (!isPlaying && pausedElapsedTimeMillis == 0L) return  // 未播放過則不儲存
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putLong(KEY_LAST_TIMESTAMP, pausedElapsedTimeMillis).apply()
-        Log.d(TAG, "Auto-saved timestamp: ${formatTime(pausedElapsedTimeMillis)}")
+        Log.d(TAG, "Auto-savedTimestamp: ${formatTime(pausedElapsedTimeMillis)}")
     }
     
     private fun setupSpeedSpinner() {
