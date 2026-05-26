@@ -22,6 +22,10 @@ import android.widget.ArrayAdapter
 import android.widget.AdapterView
 import android.widget.SeekBar
 import android.widget.EditText
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import androidx.core.app.NotificationCompat
 
 class OverlayService : Service() {
     companion object {
@@ -102,6 +106,8 @@ class OverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "OverlayService onCreate")
+        createNotificationChannel()       // 2.8: 升級為前景服務，防止被系統終止
+        startForeground(NOTIFICATION_ID, createNotification())
         try {
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)
@@ -200,6 +206,41 @@ class OverlayService : Service() {
             stopSelf()
         }
     }
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "字幕懸浮視窗服務",
+                NotificationManager.IMPORTANCE_LOW  // LOW 不會發出聲音
+            ).apply {
+                description = "保持字幕懸浮視窗在背景運行"
+                setShowBadge(false)
+            }
+            
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+    
+    private fun createNotification(): android.app.Notification {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        
+        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle("字幕懸浮視窗運行中")
+            .setContentText("點擊返回應用")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)  // 替換為你的 app icon
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)  // 無法被滑掉
+            .build()
+    }
     
     private fun setupOverlaySpeedSpinner() {
         val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
@@ -221,13 +262,14 @@ class OverlayService : Service() {
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "OverlayService onStartCommand Received")
-        return START_NOT_STICKY
+        return START_STICKY
     }
     
     override fun onDestroy() {
         super.onDestroy()    
         autoSaveHandler.removeCallbacks(autoSaveRunnable)  // 2.8: 停止定期儲存
         Log.d(TAG, "OverlayService onDestroy")
+        stopForeground(true)  // 2.8: 移除通知
         try {
             if (::overlayView.isInitialized && overlayView.isAttachedToWindow) {
                 windowManager.removeView(overlayView)
