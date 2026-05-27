@@ -54,6 +54,8 @@ class OverlayService : Service() {
         const val EXTRA_FONT_SIZE = "font_size"
         const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"        // 2.8: Foreground service notification constants
         const val NOTIFICATION_ID = 1001
+        const val ACTION_OVERLAY_SEEK = "com.example.simplevttplayer.OVERLAY_SEEK"
+        const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME"
         val TAG: String = OverlayService::class.java.simpleName
     }
     private lateinit var windowManager: WindowManager
@@ -169,7 +171,7 @@ class OverlayService : Service() {
     
     private fun sendTimeToMainFromOverlay(min: Int, sec: Int) {
         val totalMs = (min * 60 + sec) * 1000L
-        val intent = Intent(ACTION_OVERLAY_SEEK)
+        val intent = Intent(OverlayService.ACTION_OVERLAY_SEEK)
         intent.putExtra("seek_to_ms", totalMs)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
