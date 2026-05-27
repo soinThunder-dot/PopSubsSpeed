@@ -27,7 +27,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-impor60Gt android.widget.TextView
+import android.widget.TextView
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.simplevttplayer.JpGrammarHighlighter
 import android.widget.Spinner
