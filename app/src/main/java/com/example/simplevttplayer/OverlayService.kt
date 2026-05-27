@@ -75,6 +75,8 @@ class OverlayService : Service() {
     private val autoSaveHandler = Handler(Looper.getMainLooper())
     private val autoSaveRunnable = object : Runnable {
         override fun run() {            // TODO: 這裡你要呼叫 Service 版本的儲存邏輯
+            val currentMs = /* 這裡拿到目前播放時間，例如 player.currentPosition */
+            saveCurrentTimestampToPrefs(currentMs)
             autoSaveHandler.postDelayed(this, AUTO_SAVE_INTERVAL_MS)
         }            // 例如：saveOverlayPositionOrTimestamp()
     }
@@ -230,6 +232,12 @@ class OverlayService : Service() {
         }
     }
     
+    private fun saveCurrentTimestampToPrefs(timestampMs: Long) {
+        val prefs = getSharedPreferences("popsubs_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putLong("KEY_LAST_TIMESTAMP_MS", timestampMs)
+            .apply()
+    }
     private fun createNotification(): android.app.Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
