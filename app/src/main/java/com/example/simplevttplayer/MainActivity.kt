@@ -113,20 +113,20 @@ class MainActivity : AppCompatActivity() {
     private val overlayControlReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                // 【速度變更】Overlay 調整速度 → MainActivity Spinner 同步
-                OverlayService.ACTION_OVERLAY_SPEED_CHANGE -> {
-                    val position = intent.getIntExtra("speed_position", 2)
-                    Log.d(TAG, "Overlay speed changed to position: $position")
-                    spinnerSpeed.setSelection(position)      // Spinner 的 onItemSelected 會自動處理 playbackSpeed 更新
-                }
-                OverlayService.ACTION_OVERLAY_SEEK -> {                // 【進度跳轉】Overlay 拖曳進度條 → MainActivity 跳轉
+                OverlayService.ACTION_OVERLAY_SEEK -> { // Overlay 進度 → MainActivity 跳轉
                     val seekToMs = intent.getLongExtra("seek_to_ms", 0L)
                     Log.d(TAG, "Overlay seek to: ${formatTime(seekToMs)}")
                     pausedElapsedTimeMillis = seekToMs// 更新暫停時的累積時間（原始時間）
                     // 重新計算播放開始時間點    // 公式：startTimeNanos = 當前系統時間 - (目標時間 × 1,000,000)
                     // 為什麼乘以 1,000,000？因為 nanoTime 是奈秒，seekToMs 是毫秒
                     startTimeNanos = System.nanoTime() - (seekToMs * 1_000_000)
-                    sliderPlayback.value = seekToMs.toFloat()                    // 同步 Slider 位置
+                    sliderPlayback.value = seekToMs.toFloat()          //1. 同步 Slider 位置
+                    textViewYellowTime.text = formatTime(seekToMs)    // 2. 更新 slider 與畫面上的時間文字
+                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())
+                    val cue = findCueForTime((seekToMs * playbackSpeed).toLong())
+                    val newText = cue?.text ?: ""// 3. 找出此時間點對應的字幕，更新主畫面 + 通知 Overlay
+                    textViewSubtitle.text = newText
+                    sendSubtitleUpdate(newText)
                 }
             }
         }
@@ -485,7 +485,6 @@ class MainActivity : AppCompatActivity() {
          * 監聽：         * 1. OverlayService.ACTION_OVERLAY_SPEED_CHANGE         * 2. OverlayService.ACTION_OVERLAY_SEEK         * 
          * 用途：當使用者在 Overlay 控制面板操作時，同步 MainActivity         */
         val overlayControlFilter = android.content.IntentFilter().apply {
-            addAction(OverlayService.ACTION_OVERLAY_SPEED_CHANGE)
             addAction(OverlayService.ACTION_OVERLAY_SEEK)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
