@@ -402,14 +402,13 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Reload last file button clicked")            
             val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             val uriString = prefs.getString(KEY_LAST_SUBTITLE_URI, null)            
-            // 檢查是否有上次的檔案記錄
-            if (uriString.isNullOrEmpty()) {
+            if (uriString.isNullOrEmpty()) {      // 檢查是否有上次的檔案記錄
                 Toast.makeText(this, "No last file to reload.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             } // 解析 URI 並載入檔案
             val uri = Uri.parse(uriString)
             handleSubtitleFileSelected(uri)            
-            val savedTimestamp = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)            // 【2.8 新增】恢復上次儲存的播放位置
+            val savedTimestamp = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)  // 【2.8 新增】恢復上次儲存的播放位置
             if (savedTimestamp > 0L && subtitleCues.isNotEmpty()) {
                 Log.d(TAG, "Restoring timestamp: ${formatTime(savedTimestamp)}")
                 pausedElapsedTimeMillis = savedTimestamp                // 設定播放位置
@@ -435,15 +434,10 @@ class MainActivity : AppCompatActivity() {
         /**         * 更新 Kuromoji 切換指示器的顏色         * - 啟用：綠色 (#4CAF50)         * - 停用：灰色 (#9E9E9E)         */
         fun updateJpToggleUi() {
             textViewJpToggle.setTextColor(
-                if (kuromojiEnabled) {
-                    Color.parseColor("#4CAF50")  // 綠色 ON
-                } else {
-                    Color.parseColor("#9E9E9E")  // 灰色 OFF
-                }
-            )
+                if (kuromojiEnabled) { Color.parseColor("#4CAF50")    // 綠色 ON
+                } else {               Color.parseColor("#9E9E9E") }) // 灰色 OFF
         }// 初始化顯示狀態
-        updateJpToggleUi()
-        /**         * 點擊切換 Kuromoji 功能         */
+        updateJpToggleUi()/**         * 點擊切換 Kuromoji 功能         */
         textViewJpToggle.setOnClickListener {          
             kuromojiEnabled = !kuromojiEnabled         // 切換狀態  
             JpGrammarHighlighter.enabled = kuromojiEnabled            // 同步到 highlighter            
@@ -455,10 +449,8 @@ class MainActivity : AppCompatActivity() {
         /**         * Overlay 字體大小輸入框監聽器         *          * 當使用者在 MainActivity 改變字體大小時：
          * 1. 解析輸入的數字（預設 20）         * 2. 建立 ACTION_UPDATE_FONT_SIZE 廣播         * 3. 傳送給 OverlayService         * 4. OverlayService 更新所有字幕視窗字體         */
         editTextOverlayFontSize.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {                // 文字改變前（不需處理）
-            }            
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {                // 文字改變中（不需處理）
-            }            
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {    }            // 文字改變前（不需處理）
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {     }           // 文字改變中（不需處理）
             override fun afterTextChanged(s: android.text.Editable?) {                // 文字改變後（處理新值）                
                 val fontSize = s?.toString()?.toIntOrNull() ?: 20                // 解析字體大小（無效輸入預設為 20）                
                 val intent = Intent(OverlayService.ACTION_UPDATE_FONT_SIZE)                // 建立廣播 Intent
@@ -471,12 +463,10 @@ class MainActivity : AppCompatActivity() {
             isOverlayUIShown = !isOverlayUIShown            
             if (isOverlayUIShown) {                // 啟動 Overlay
                 Log.d(TAG, "Launching overlay service")                
-                if (checkOverlayPermission()) {                // 檢查權限
+                if (checkOverlayPermission()) {               // 檢查權限
                     startOverlayService()                    // 有權限：直接啟動服務
-                } else {                    // 無權限：請求權限
-                    requestOverlayPermission()
-                }                
-                sendSubtitleUpdate(textViewSubtitle.text.toString())                // 傳送當前字幕到 Overlay
+                } else { requestOverlayPermission()}        // 無權限：請求權限
+                sendSubtitleUpdate(textViewSubtitle.text.toString())  // 傳送當前字幕到 Overlay
             } else {                // 關閉 Overlay
                 Log.d(TAG, "Stopping overlay service")
                 sendSubtitleUpdate("")      // 清空 Overlay 字幕顯示
@@ -489,10 +479,7 @@ class MainActivity : AppCompatActivity() {
         // 【階段 7】註冊 BroadcastReceiver        // ===============================================================================        
         /**         * 註冊 Overlay 暫停/播放接收器         *          * 監聽：OverlayService.ACTION_PAUSE_PLAY         * 用途：當使用者在 Overlay 點擊暫停時，同步 MainActivity 狀態         */
         val pausePlayFilter = android.content.IntentFilter(OverlayService.ACTION_PAUSE_PLAY)
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            overlayPausePlayReceiver, 
-            pausePlayFilter
-        )
+        LocalBroadcastManager.getInstance(this).registerReceiver(overlayPausePlayReceiver, pausePlayFilter)
         Log.d(TAG, "Registered overlayPausePlayReceiver")
         /**         * 【2.8 新增】註冊 Overlay 控制面板接收器         * 
          * 監聽：         * 1. OverlayService.ACTION_OVERLAY_SPEED_CHANGE         * 2. OverlayService.ACTION_OVERLAY_SEEK         * 
