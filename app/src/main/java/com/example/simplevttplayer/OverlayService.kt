@@ -133,7 +133,7 @@ class OverlayService : Service() {
             params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                layoutFlag,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,  // 或你之前用的 TYPE_PHONE
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
