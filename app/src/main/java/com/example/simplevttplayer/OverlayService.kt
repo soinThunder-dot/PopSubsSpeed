@@ -35,7 +35,10 @@ class OverlayService : Service() {
         const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION"
         const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
         const val EXTRA_FONT_SIZE = "font_size"
-            // 新增 3 個 actions
+        // 2.8: Foreground service notification constants
+        const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"
+        const val NOTIFICATION_ID = 1001
+        // 新增 3 個 actions
         const val ACTION_OVERLAY_SPEED_CHANGE = "com.example.simplevttplayer.OVERLAY_SPEED_CHANGE"
         const val ACTION_OVERLAY_SEEK = "com.example.simplevttplayer.OVERLAY_SEEK"
         const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME" // MainActivity → Overlay
@@ -44,10 +47,6 @@ class OverlayService : Service() {
     
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
-            
-        // 2.8: Foreground service notification constants
-        private const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"
-        private const val NOTIFICATION_ID = 1001
     private lateinit var textViewOverlaySubtitle: TextView
     private lateinit var params: WindowManager.LayoutParams
     private var isPaused = false
@@ -72,6 +71,14 @@ class OverlayService : Service() {
     
     private var currentSubtitle = ""
     private var currentFontSize = 20
+
+    private val autoSaveHandler = Handler(Looper.getMainLooper())
+    private val autoSaveRunnable = object : Runnable {
+        override fun run() {            // TODO: 這裡你要呼叫 Service 版本的儲存邏輯
+            autoSaveHandler.postDelayed(this, AUTO_SAVE_INTERVAL_MS)
+        }            // 例如：saveOverlayPositionOrTimestamp()
+    }
+    private val AUTO_SAVE_INTERVAL_MS = 3 * 60 * 1000L  // 3 分鐘
     
     private val subtitleUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -187,12 +194,8 @@ class OverlayService : Service() {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
                 y = 0
             }
-            
             windowManager.addView(overlayView, params)
             Log.d(TAG, "Overlay view added successfully.")
-            
-            // 2.8: Create 3 copy overlays at top positions
-            create3CopyOverlays(layoutFlag)
             
             val filter = IntentFilter().apply {
                 addAction(ACTION_UPDATE_SUBTITLE)
@@ -209,6 +212,7 @@ class OverlayService : Service() {
             Toast.makeText(this, "Failed to create overlay.", Toast.LENGTH_SHORT).show()
             stopSelf()
         }
+        autoSaveHandler.postDelayed(autoSaveRunnable, AUTO_SAVE_INTERVAL_MS)
     }
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
