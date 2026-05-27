@@ -52,8 +52,6 @@ class OverlayService : Service() {
         const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION"
         const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
         const val EXTRA_FONT_SIZE = "font_size"
-        const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"        // 2.8: Foreground service notification constants
-        const val NOTIFICATION_ID = 1001
         const val ACTION_OVERLAY_SEEK = "com.example.simplevttplayer.OVERLAY_SEEK"
         const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME"
         val TAG: String = OverlayService::class.java.simpleName
@@ -103,8 +101,6 @@ class OverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "OverlayService onCreate")
-        createNotificationChannel()       // 2.8: 升級為前景服務，防止被系統終止
-        startForeground(NOTIFICATION_ID, createNotification())
         try {
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)            
@@ -133,12 +129,6 @@ class OverlayService : Service() {
             }
             
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-            
-            val layoutFlag: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_PHONE
-            }
             
             params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -174,33 +164,6 @@ class OverlayService : Service() {
         val intent = Intent(OverlayService.ACTION_OVERLAY_SEEK)
         intent.putExtra("seek_to_ms", totalMs)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-    }
-    
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel( NOTIFICATION_CHANNEL_ID, "字幕懸浮視窗服務", NotificationManager.IMPORTANCE_LOW  // LOW 不會發出聲音
-            ).apply {
-                description = "保持字幕懸浮視窗在背景運行"
-                setShowBadge(false)
-            }
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-    private fun createNotification(): android.app.Notification {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }        
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("字幕懸浮視窗運行中")
-            .setContentText("點擊返回應用")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)  // 替換為你的 app icon
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)  // 無法被滑掉
-            .build()
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
