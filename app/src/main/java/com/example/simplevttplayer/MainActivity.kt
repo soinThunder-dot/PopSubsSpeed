@@ -501,12 +501,252 @@ class MainActivity : AppCompatActivity() {
             addAction(OverlayService.ACTION_OVERLAY_SPEED_CHANGE)
             addAction(OverlayService.ACTION_OVERLAY_SEEK)
         }
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            overlayControlReceiver,
-            overlayControlFilter
-        )
-        Log.d(TAG, "Registered overlayControlReceiver")
-        
-        Log.d(TAG, "MainActivity onCreate completed")
+        LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
     }
 
+    private fun setupSliderListener() {
+        sliderPlayback.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                textViewCurrentTime.text = formatTime((value * playbackSpeed).toLong())
+                textViewYellowTime.text = formatTime(value.toLong())
+            }
+        }
+        sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {
+                if (isPlaying) {
+                    isPlaying = false
+                    handler.removeCallbacks(updateRunnable)
+                }
+            }
+            override fun onStopTrackingTouch(slider: Slider) {
+                pausedElapsedTimeMillis = slider.value.toLong()
+                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+            }
+        })
+    }
+
+    private fun saveCurrentTimestamp() {
+        if (!isPlaying && pausedElapsedTimeMillis == 0L) return  // 未播放過則不儲存
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().putLong(KEY_LAST_TIMESTAMP, pausedElapsedTimeMillis).apply()
+        Log.d(TAG, "Auto-savedTimestamp: ${formatTime(pausedElapsedTimeMillis)}")
+    }
+    
+    private fun setupSpeedSpinner() {
+        val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerSpeed.adapter = adapter
+        spinnerSpeed.setSelection(2)
+        spinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val oldSpeed = playbackSpeed
+                playbackSpeed = when (position) {
+                    0 -> 0.5f; 1 -> 0.75f; 2 -> 1.0f; 3 -> 1.25f; 4 -> 1.5f; 5 -> 2.0f; else -> 1.0f
+                }
+                if (isPlaying) {
+                    val currentProgress = (System.nanoTime() - startTimeNanos) * oldSpeed / 1_000_000
+                    startTimeNanos = System.nanoTime() - (currentProgress * 1_000_000 / playbackSpeed).toLong()
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun loadAndParseSubtitleFile(uri: Uri, format: String) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                subtitleCues = if (format == "vtt") parseVtt(inputStream) else parseSrt(inputStream)
+                if (subtitleCues.isNotEmpty()) {
+                    buttonPlayPause.isEnabled = true
+                    buttonReset.isEnabled = true
+                    buttonLaunchOverlay.isEnabled = true
+                    val duration = (subtitleCues.last().endTimeMs) + 7200000L
+                    sliderPlayback.valueTo = duration.toFloat()
+                    sliderPlayback.isEnabled = true
+                    textViewSubtitle.text = "[Ready to play]"
+                }
+            }
+        } catch (e: Exception) {}
+    }
+
+    private fun parseVtt(inputStream: InputStream): List<SubtitleCue> {
+        val cues = mutableListOf<SubtitleCue>()
+        val reader = inputStream.bufferedReader()
+        try {
+            var line = reader.readLine()
+            if (line?.startsWith("\uFEFF") == true) line = line.substring(1)
+            if (line == null || !line.contains("WEBVTT")) return emptyList()
+            while (reader.readLine().also { line = it } != null) {
+                if (line?.contains("-->") == true) {
+                    val t = line!!.split("-->")
+                    val s = timeToMillis(t[0].trim())
+                    val e = timeToMillis(t[1].trim().split(" ")[0])
+                    val b = StringBuilder()
+                    var cL = reader.readLine()
+                    while (cL != null && cL.isNotBlank()) {
+                        if (b.isNotEmpty()) b.append(" ")
+                        b.append(cL); cL = reader.readLine()
+                    }
+                    if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
+                }
+            }
+        } catch (e: Exception) {}
+        return cues.sortedBy { it.startTimeMs }
+    }
+
+    private fun parseSrt(inputStream: InputStream): List<SubtitleCue> {
+        val cues = mutableListOf<SubtitleCue>()
+        val reader = inputStream.bufferedReader()
+        try {
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                if (line?.trim()?.toIntOrNull() != null) {
+                    val timeL = reader.readLine()
+                    if (timeL?.contains("-->") == true) {
+                        val ts = timeL.split("-->")
+                        val s = timeToMillis(ts[0].trim().replace(',', '.'))
+                        val e = timeToMillis(ts[1].trim().split(" ")[0].replace(',', '.'))
+                        val b = StringBuilder()
+                        var tL = reader.readLine()
+                        while (tL != null && tL.isNotBlank()) {
+                            if (b.isNotEmpty()) b.append(" ")
+                            b.append(tL); tL = reader.readLine()
+                        }
+                        if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+        return cues.sortedBy { it.startTimeMs }
+    }
+
+    private fun timeToMillis(t: String): Long? {
+        return try {
+            val p = t.split(":")
+            val last = p.last()
+            val dot = last.indexOf('.')
+            val s = if (dot != -1) last.substring(0, dot).toLong() else last.toLong()
+            val ms = if (dot != -1) last.substring(dot + 1).padEnd(3, '0').take(3).toLong() else 0L
+            if (p.size == 3) (p[0].toLong() * 3600 + p[1].toLong() * 60 + s) * 1000 + ms
+            else (p[0].toLong() * 60 + s) * 1000 + ms
+        } catch (e: Exception) { null }
+    }
+
+    private fun checkOverlayPermission(): Boolean = 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(this) else true
+
+    private fun requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            overlayPermissionLauncher.launch(i)
+        }
+    }
+
+    private fun startOverlayService() {
+        if (checkOverlayPermission()) startService(Intent(this, OverlayService::class.java))
+    }
+
+    private fun stopOverlayService() { stopService(Intent(this, OverlayService::class.java)) }
+
+    private fun sendSubtitleUpdate(text: String) {
+        val i = Intent(ACTION_UPDATE_SUBTITLE_LOCAL).apply {
+            putExtra(EXTRA_SUBTITLE_TEXT_LOCAL, if (isOverlayUIShown) text else "")
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(i)
+    }
+
+    private fun togglePlayPause() { if (isPlaying) pausePlayback() else startPlayback() }
+
+    private fun startPlayback() {
+        if (subtitleCues.isEmpty()) return
+        isPlaying = true; setPlayButtonState(true)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+        handler.post(updateRunnable)
+        autoSaveHandler.removeCallbacks(autoSaveRunnable)// 2.8: 啟動自動儲存
+        autoSaveHandler.postDelayed(autoSaveRunnable, AUTO_SAVE_INTERVAL_MS)
+        val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", false) }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+    private fun pausePlayback() {
+        if (!isPlaying) return
+        isPlaying = false; setPlayButtonState(false)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        pausedElapsedTimeMillis = (System.nanoTime() - startTimeNanos) / 1_000_000
+        handler.removeCallbacks(updateRunnable)
+        autoSaveHandler.removeCallbacks(autoSaveRunnable)// 2.8: 停止自動儲存並立即儲存一次
+        saveCurrentTimestamp()
+        val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", true) }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+    private fun resetPlayback() {    
+        handler.removeCallbacks(updateRunnable)   // ★ 停掉舊的 runnable
+
+        pausePlayback(); pausedElapsedTimeMillis = 0L; startTimeNanos = 0L
+        textViewSubtitle.text = "[Ready to play]"; textViewCurrentTime.text = formatTime(0)
+        textViewYellowTime.text = formatTime(0); sliderPlayback.value = 0.0f; sendSubtitleUpdate("")
+    }
+
+    private fun resetPlaybackStateOnError() {
+        subtitleCues = emptyList(); buttonPlayPause.isEnabled = false
+        sliderPlayback.isEnabled = false; textViewSubtitle.text = "[Error loading file]"; sendSubtitleUpdate("")
+    }
+
+    private fun setPlayButtonState(playing: Boolean) {
+        if (playing) {
+            buttonPlayPause.text = "Pause"
+            buttonPlayPause.icon = ContextCompat.getDrawable(this, R.drawable.ic_pause)
+        } else {
+            buttonPlayPause.text = "Play"
+            buttonPlayPause.icon = ContextCompat.getDrawable(this, R.drawable.ic_play_arrow)
+        }
+    }
+
+    private val updateRunnable = object : Runnable {
+        override fun run() {
+            if (!isPlaying) return
+            val eR = (System.nanoTime() - startTimeNanos) / 1_000_000
+            textViewCurrentTime.text = formatTime((eR * playbackSpeed).toLong())
+            textViewYellowTime.text = formatTime(eR)
+            if (!sliderPlayback.isPressed && eR.toFloat() <= sliderPlayback.valueTo) sliderPlayback.value = eR.toFloat()
+            val cue = findCueForTime((eR * playbackSpeed).toLong())  // ✅ 這樣字幕查詢才會根據速度調整後的時間去比對
+            val nT = cue?.text ?: ""
+            val intent = Intent(OverlayService.ACTION_UPDATE_TIME)// ✅ 加這個：通知 Overlay 更新時間
+            intent.putExtra("current_time_ms", eR)
+            LocalBroadcastManager.getInstance(this@MainActivity).sendBroadcast(intent)//  >
+            if (textViewSubtitle.text != nT) { textViewSubtitle.text = nT; sendSubtitleUpdate(nT) }
+            //if (subtitleCues.isNotEmpty() && eR >= subtitleCues.last().endTimeMs) {
+                //pausePlayback(); textViewSubtitle.text = "[Playback Finished]"; sendSubtitleUpdate("[Playback Finished]")
+                //return
+            //}                            //把這整個 if 區塊刪掉，改成讓 runnable 在超出範圍後自然停止：
+            handler.postDelayed(this, 30)
+        }
+    }
+
+    private fun findCueForTime(time: Long): SubtitleCue? = subtitleCues.find { time >= it.startTimeMs && time < it.endTimeMs }
+
+    private fun formatTime(ms: Long): String {
+        val s = ms / 1000; return String.format("%02d:%02d.%03d", s / 60, s % 60, ms % 1000)
+    }
+
+    @SuppressLint("Range")
+    private fun getFileName(uri: Uri): String? {
+        return contentResolver.query(uri, null, null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(c.getColumnIndex(OpenableColumns.DISPLAY_NAME)) else null
+        }
+    }
+
+    private fun openFilePicker() {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf("text/vtt", "application/x-subrip", "text/plain")
+            )
+        }
+        selectSubtitleFileLauncher.launch(i)
+    }
+}
