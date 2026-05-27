@@ -484,7 +484,7 @@ class MainActivity : AppCompatActivity() {
         /**         * 【2.8 新增】註冊 Overlay 控制面板接收器         * 
          * 監聽：         * 1. OverlayService.ACTION_OVERLAY_SPEED_CHANGE         * 2. OverlayService.ACTION_OVERLAY_SEEK         * 
          * 用途：當使用者在 Overlay 控制面板操作時，同步 MainActivity         */
-        val overlayControlFilter = android.content.IntentFilter().apply {
+        val overlayControlFilter = IntentFilter().apply {
             addAction(OverlayService.ACTION_OVERLAY_SEEK)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
