@@ -1,77 +1,16 @@
-/**
- * OverlayService.kt - 字幕浮動窗體服務
- *
- * ================================================================
- * 【核心功能總覽】
- * ================================================================
- *
- * 1. 浮動字幕顯示系統
- *    - 使用 WindowManager 創建系統級浮動窗口
- *    - 支援字幕即時更新與顯示
- *    - 提供拖曳移動、調整位置功能
- *    - 日文語法高亮處理 (JpGrammarHighlighter)
- *
- * 2. [2.8 新增] 三層字幕副本系統
- *    - 左上、正中、右上三個獨立字幕視圖
- *    - 同步顯示相同字幕內容
- *    - 各副本可獨立控制顯示/隱藏
- *    - 提升學習效率：多角度同時閱讀
- *
- * 3. [2.8 新增] 浮窗內嵌控制面板
- *    - 播放速度調整: 0.5x ~ 2.0x (7段)
- *    - 時間軸拖曳: SeekBar 手動定位
- *    - 字體大小控制: 動態調整所有字幕
- *    - 僅在暫停時顯示，播放時自動隱藏
- *
- * 4. [2.8 新增] Foreground Service 升級
- *    - 符合 Android 8.0+ 前景服務規範
- *    - 常駐通知欄，避免系統回收
- *    - Notification Channel 管理
- *    - 提供服務狀態指示
- *
- * 5. 廣播通信機制
- *    - LocalBroadcastManager 接收 MainActivity 指令
- *    - 支援動作:
- *      • UPDATE_SUBTITLE: 更新字幕文字
- *      • PAUSE_PLAY: 暫停/播放切換
- *      • RESET_OVERLAY_POSITION: 重置浮窗位置
- *      • UPDATE_FONT_SIZE: 字體大小調整
- *      • [2.8] OVERLAY_SPEED_CHANGE: 速度變更
- *      • [2.8] OVERLAY_SEEK: 時間軸拖曳
- *      • [2.8] UPDATE_TIME: 時間戳更新
- *
- * 6. 生命週期管理
- *    - onCreate: 初始化浮窗、註冊接收器
- *    - onStartCommand: 處理啟動指令
- *    - onDestroy: 清理資源、移除視圖
- *
- * ================================================================
- * 【2.8 版本重點變更】
- * ================================================================
- *
- * A. 三層字幕架構 (create3CopyOverlays)
- *    - textViewOverlaySubtitle (主字幕，可拖曳)
- *    - textViewTopLeft (左上副本)
- *    - textViewTopCenter (正中副本)
- *    - textViewTopRight (右上副本，未來擴充)
- *
- * B. 控制面板 UI (controlPanel)
- *    - speedSpinner: Spinner 選單 (0.5x ~ 2.0x)
- *    - timeSeekBar: SeekBar 時間軸
- *    - fontSizeEditor: EditText 字體輸入
- *    - 依據 isPaused 狀態動態顯示/隱藏
- *
- * C. Foreground 通知系統
- *    - createNotificationChannel(): 建立通知頻道
- *    - createNotification(): 生成前景通知
- *    - startForeground(NOTIFICATION_ID, notification)
- *
- * D. 雙向通信增強
- *    - Overlay → MainActivity: 速度/拖曳事件回傳
- *    - MainActivity → Overlay: 時間戳同步
- *
- */
-
+/** * OverlayService.kt - 字幕浮動窗體服務 * * ================================================================
+ * 【核心功能總覽】 * ================================================================ *
+ * 1. 浮動字幕顯示系統 *    - 使用 WindowManager 創建系統級浮動窗口 *    - 支援字幕即時更新與顯示 *    - 提供拖曳移動、調整位置功能 *    - 日文語法高亮處理 (JpGrammarHighlighter) *
+ * 2. [2.8 新增] 浮窗內嵌控制面板 *    - 播放速度調整: 0.5x ~ 2.0x (7段) *    - 時間軸拖曳: SeekBar 手動定位 *    - 字體大小控制: 動態調整所有字幕 *    - 僅在暫停時顯示，播放時自動隱藏 *
+ * 3. [2.8 新增] Foreground Service 升級 *    - 符合 Android 8.0+ 前景服務規範 *    - 常駐通知欄，避免系統回收 *    - Notification Channel 管理 *    - 提供服務狀態指示 *
+ * 4. 廣播通信機制 *    - LocalBroadcastManager 接收 MainActivity 指令
+ *    - 支援動作: *      • UPDATE_SUBTITLE: 更新字幕文字 *      • PAUSE_PLAY: 暫停/播放切換 *      • RESET_OVERLAY_POSITION: 重置浮窗位置
+ *                      • UPDATE_FONT_SIZE: 字體大小調整 *      • [2.8] OVERLAY_SPEED_CHANGE: 速度變更 *      • [2.8] OVERLAY_SEEK: 時間軸拖曳 *      • [2.8] UPDATE_TIME: 時間戳更新 *
+ * 5. 生命週期管理 *    - onCreate: 初始化浮窗、註冊接收器 *    - onStartCommand: 處理啟動指令 *    - onDestroy: 清理資源、移除視圖 * * ================================================================
+ * 【2.8 版本重點變更】 * ================================================================ *
+ * A. 控制面板 UI (controlPanel) *    - speedSpinner: Spinner 選單 (0.5x ~ 2.0x) *    - timeSeekBar: SeekBar 時間軸 *    - fontSizeEditor: EditText 字體輸入 *    - 依據 isPaused 狀態動態顯示/隱藏 *
+ * B. Foreground 通知系統 *    - createNotificationChannel(): 建立通知頻道 *    - createNotification(): 生成前景通知 *    - startForeground(NOTIFICATION_ID, notification) *
+ * C. 雙向通信增強 *    - Overlay → MainActivity: 速度/拖曳事件回傳 *    - MainActivity → Overlay: 時間戳同步 * */
 package com.example.simplevttplayer
 
 import android.app.Service
@@ -102,27 +41,18 @@ import android.app.PendingIntent
 import androidx.core.app.NotificationCompat
 
 class OverlayService : Service() {
-    companion object {
-                // ============================================================
-        // 廣播 Action 常數區 (LocalBroadcast 指令定義)
-        // ============================================================
-        // 用於 MainActivity 與 OverlayService 之間的通訊
-        // LocalBroadcastManager.sendBroadcast(intent) 發送指令
-
-        
-        // ── 2.7 基本操作 Actions ──
-        // UPDATE_SUBTITLE: 更新字幕文字 (Extra: subtitle_text)
-        //   MainActivity 發送新字幕 → OverlayService 顯示在浮窗
+    companion object {                // ============================================================
+        // 廣播 Action 常數區 (LocalBroadcast 指令定義)        // ============================================================
+        // 用於 MainActivity 與 OverlayService 之間的通訊        // LocalBroadcastManager.sendBroadcast(intent) 發送指令        
+        // ── 2.7 基本操作 Actions ──        // UPDATE_SUBTITLE: 更新字幕文字 (Extra: subtitle_text)        //   MainActivity 發送新字幕 → OverlayService 顯示在浮窗
         const val ACTION_UPDATE_SUBTITLE = "com.example.simplevttplayer.UPDATE_SUBTITLE"
         const val EXTRA_SUBTITLE_TEXT = "subtitle_text"
-                // PAUSE_PLAY: 切換暫停/播放狀態
-        //   切換 isPaused flag → 控制 controlPanel 顯示/隱藏
+        // PAUSE_PLAY: 切換暫停/播放狀態        //   切換 isPaused flag → 控制 controlPanel 顯示/隱藏
         const val ACTION_PAUSE_PLAY = "com.example.simplevttplayer.PAUSE_PLAY"
         const val ACTION_RESET_OVERLAY_POSITION = "com.example.simplevttplayer.RESET_OVERLAY_POSITION"
         const val ACTION_UPDATE_FONT_SIZE = "com.example.simplevttplayer.UPDATE_FONT_SIZE"
         const val EXTRA_FONT_SIZE = "font_size"
-        // 2.8: Foreground service notification constants
-        const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"
+        const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"        // 2.8: Foreground service notification constants
         const val NOTIFICATION_ID = 1001
         // 新增 3 個 actions
         const val ACTION_OVERLAY_SPEED_CHANGE = "com.example.simplevttplayer.OVERLAY_SPEED_CHANGE"
@@ -130,30 +60,17 @@ class OverlayService : Service() {
         const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME" // MainActivity → Overlay
         val TAG: String = OverlayService::class.java.simpleName
     }
-    
     private lateinit var windowManager: WindowManager
     private lateinit var overlayView: View
     private lateinit var textViewOverlaySubtitle: TextView
     private lateinit var params: WindowManager.LayoutParams
     private var isPaused = false
-    
     // 2.8: Control panel views
     private lateinit var controlPanel: View
     private lateinit var overlaySpinnerSpeed: Spinner
     private lateinit var overlaySeekBar: SeekBar
     private lateinit var overlayTextTime: TextView
     private lateinit var overlayEditFontSize: EditText
-    
-    // 2.8: Three copy overlays (top-left, center, top-right)
-    private lateinit var copyOverlayLeftView: View
-    private lateinit var copyOverlayCenterView: View
-    private lateinit var copyOverlayRightView: View
-    private lateinit var copyTextLeft: TextView
-    private lateinit var copyTextCenter: TextView
-    private lateinit var copyTextRight: TextView
-    private lateinit var paramsLeft: WindowManager.LayoutParams
-    private lateinit var paramsCenter: WindowManager.LayoutParams
-    private lateinit var paramsRight: WindowManager.LayoutParams
     
     private var currentSubtitle = ""
     private var currentFontSize = 20
@@ -199,37 +116,28 @@ class OverlayService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
         try {
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
-            textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)
-            
-            // 2.8: Get control panel views
-            controlPanel = overlayView.findViewById(R.id.controlPanel)
+            textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)            
+            controlPanel = overlayView.findViewById(R.id.controlPanel)            // 2.8: Get control panel views
             overlaySpinnerSpeed = overlayView.findViewById(R.id.overlaySpinnerSpeed)
             overlaySeekBar = overlayView.findViewById(R.id.overlaySeekBar)
             overlayTextTime = overlayView.findViewById(R.id.overlayTextTime)
             overlayEditFontSize = overlayView.findViewById(R.id.overlayEditFontSize)
-            
-            // 2.8: Setup speed spinner
-            setupOverlaySpeedSpinner()
-            
-            // SeekBar 改變時 → 通知 MainActivity
-            overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            setupOverlaySpeedSpinner()            // 2.8: Setup speed spinner
+            overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {            // SeekBar 改變時 → 通知 MainActivity
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
                         overlayTextTime.text = formatTime(progress.toLong())
                     }
                 }
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                    // ❌ 目前缺少這個 - 應該暫停播放或通知 MainActivity
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {                    // ❌ 目前缺少這個 - 應該暫停播放或通知 MainActivity
                 }
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {
                     val intent = Intent(ACTION_OVERLAY_SEEK)
                     intent.putExtra("seek_to_ms", seekBar?.progress?.toLong() ?: 0L)
                     LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
                 }
-            })
-            
-            // 2.8: Setup font size EditText
-            overlayEditFontSize.addTextChangedListener(object : android.text.TextWatcher {
+            })            
+            overlayEditFontSize.addTextChangedListener(object : android.text.TextWatcher {            // 2.8: Setup font size EditText
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                 override fun afterTextChanged(s: android.text.Editable?) {
@@ -396,10 +304,8 @@ class OverlayService : Service() {
         val intent = Intent(ACTION_PAUSE_PLAY).apply {
             putExtra("is_paused", isPaused)
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-        
-        updateSubtitlePauseState()
-        
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)        
+        updateSubtitlePauseState()        
         // 2.8: Show/hide control panel on pause/resume
         if (::controlPanel.isInitialized) {
             controlPanel.visibility = if (isPaused) View.VISIBLE else View.GONE
