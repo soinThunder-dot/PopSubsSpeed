@@ -7,110 +7,57 @@
     android:padding="8dp"
     android:background="@android:color/transparent">
 
-    <!-- Control Panel: shown only when paused via subtitle click -->
+    <!-- 控制面板：只剩 MIN / SEC 兩格 -->
     <LinearLayout
         android:id="@+id/controlPanel"
-        android:layout_width="280dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:background="#CC000000"
-        android:padding="8dp"
-        android:visibility="gone">
+        android:padding="6dp"
+        android:visibility="gone"
+        android:gravity="center_vertical">
 
-        <!-- Speed Spinner Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="6dp">
+            android:text="MIN:"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:layout_marginEnd="4dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Speed:"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:layout_marginEnd="6dp" />
-
-            <Spinner
-                android:id="@+id/overlaySpinnerSpeed"
-                android:layout_width="100dp"
-                android:layout_height="wrap_content"
-                android:backgroundTint="#AAFFFFFF" />
-        </LinearLayout>
-
-        <!-- Time Slider Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <EditText
+            android:id="@+id/editMin"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="6dp">
+            android:inputType="number"
+            android:maxLength="2"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:background="#44FFFFFF"
+            android:padding="4dp"
+            android:gravity="center" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Time:"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:layout_marginEnd="4dp" />
-
-            <SeekBar
-                android:id="@+id/overlaySeekBar"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:max="1000"
-                android:progress="0"
-                android:progressTint="#4CAF50"
-                android:thumbTint="#FFFFFF" />
-
-            <TextView
-                android:id="@+id/overlayTextTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="00:00.000"
-                android:textColor="#FFFF00"
-                android:textSize="11sp"
-                android:layout_marginStart="4dp" />
-        </LinearLayout>
-
-        <!-- Font Size Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:text="SEC:"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="4dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Font:"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:layout_marginEnd="6dp" />
-
-            <EditText
-                android:id="@+id/overlayEditFontSize"
-                android:layout_width="60dp"
-                android:layout_height="wrap_content"
-                android:inputType="number"
-                android:text="20"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:background="#44FFFFFF"
-                android:padding="4dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="sp"
-                android:textColor="#AAAAAA"
-                android:textSize="12sp"
-                android:layout_marginStart="3dp" />
-        </LinearLayout>
-
+        <EditText
+            android:id="@+id/editSec"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:maxLength="2"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:background="#44FFFFFF"
+            android:padding="4dp"
+            android:gravity="center" />
     </LinearLayout>
 
     <!-- Main row: Subtitle text + move-up button -->
