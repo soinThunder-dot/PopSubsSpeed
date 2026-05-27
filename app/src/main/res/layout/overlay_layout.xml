@@ -137,8 +137,8 @@
         <!-- Green move-up button -->
         <View
             android:id="@+id/buttonMoveUp"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:background="#4CAF50"
             android:clickable="true"
             android:focusable="true"
