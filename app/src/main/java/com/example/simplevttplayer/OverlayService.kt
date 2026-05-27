@@ -71,16 +71,6 @@ class OverlayService : Service() {
     
     private var currentSubtitle = ""
     private var currentFontSize = 20
-
-    private val autoSaveHandler = Handler(Looper.getMainLooper())
-    private val autoSaveRunnable = object : Runnable {
-        override fun run() {            // TODO: 這裡你要呼叫 Service 版本的儲存邏輯
-            val currentMs = /* 這裡拿到目前播放時間，例如 player.currentPosition */
-            saveCurrentTimestampToPrefs(currentMs)
-            autoSaveHandler.postDelayed(this, AUTO_SAVE_INTERVAL_MS)
-        }            // 例如：saveOverlayPositionOrTimestamp()
-    }
-    private val AUTO_SAVE_INTERVAL_MS = 3 * 60 * 1000L  // 3 分鐘
     
     private val subtitleUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -214,7 +204,6 @@ class OverlayService : Service() {
             Toast.makeText(this, "Failed to create overlay.", Toast.LENGTH_SHORT).show()
             stopSelf()
         }
-        autoSaveHandler.postDelayed(autoSaveRunnable, AUTO_SAVE_INTERVAL_MS)
     }
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -232,12 +221,6 @@ class OverlayService : Service() {
         }
     }
     
-    private fun saveCurrentTimestampToPrefs(timestampMs: Long) {
-        val prefs = getSharedPreferences("popsubs_prefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putLong("KEY_LAST_TIMESTAMP_MS", timestampMs)
-            .apply()
-    }
     private fun createNotification(): android.app.Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -283,7 +266,6 @@ class OverlayService : Service() {
     
     override fun onDestroy() {
         super.onDestroy()    
-        autoSaveHandler.removeCallbacks(autoSaveRunnable)  // 2.8: 停止定期儲存
         Log.d(TAG, "OverlayService onDestroy")
         stopForeground(true)  // 2.8: 移除通知
         try {
