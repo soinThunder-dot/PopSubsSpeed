@@ -169,7 +169,7 @@ class OverlayService : Service() {
     
     private fun sendTimeToMainFromOverlay(min: Int, sec: Int) {
         val totalMs = (min * 60 + sec) * 1000L
-        val intent = Intent(OverlayService.ACTION_OVERLAY_SEEK)
+        val intent = Intent(ACTION_OVERLAY_SEEK)
         intent.putExtra("seek_to_ms", totalMs)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
