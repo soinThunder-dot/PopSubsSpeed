@@ -67,10 +67,8 @@ class OverlayService : Service() {
     private var isPaused = false
     // 2.8: Control panel views
     private lateinit var controlPanel: View
-    private lateinit var overlaySpinnerSpeed: Spinner
-    private lateinit var overlaySeekBar: SeekBar
-    private lateinit var overlayTextTime: TextView
-    private lateinit var overlayEditFontSize: EditText
+    private lateinit var editMin: EditText
+    private lateinit var editSec: EditText
     
     private var currentSubtitle = ""
     private var currentFontSize = 20
@@ -117,50 +115,9 @@ class OverlayService : Service() {
         try {
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             textViewOverlaySubtitle = overlayView.findViewById(R.id.textViewOverlaySubtitle)            
-            controlPanel = overlayView.findViewById(R.id.controlPanel)            // 2.8: Get control panel views
-            overlaySpinnerSpeed = overlayView.findViewById(R.id.overlaySpinnerSpeed)
-            overlaySeekBar = overlayView.findViewById(R.id.overlaySeekBar)
-            overlayTextTime = overlayView.findViewById(R.id.overlayTextTime)
-            overlayEditFontSize = overlayView.findViewById(R.id.overlayEditFontSize)
-            setupOverlaySpeedSpinner()            // 2.8: Setup speed spinner
-            overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {            // SeekBar 改變時 → 通知 MainActivity
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    if (fromUser) {
-                        overlayTextTime.text = formatTime(progress.toLong())
-                    }
-                }
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                    val intent = Intent(ACTION_PAUSE_PLAY).apply {     // 通知 MainActivity 先暫停播放
-                        putExtra("is_paused", true)
-                    }
-                    LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
-                    if (!isPaused) {                    // 本地同步 isPaused 狀態與 UI
-                        isPaused = true
-                        updateSubtitlePauseState()
-                        if (::controlPanel.isInitialized) {
-                            controlPanel.visibility = View.VISIBLE
-                        }
-                    }
-                }
-                override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                    val intent = Intent(ACTION_OVERLAY_SEEK)
-                    intent.putExtra("seek_to_ms", seekBar?.progress?.toLong() ?: 0L)
-                    LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
-                }
-            })            
-            overlayEditFontSize.addTextChangedListener(object : android.text.TextWatcher {            // 2.8: Setup font size EditText
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                override fun afterTextChanged(s: android.text.Editable?) {
-                    val fontSize = s?.toString()?.toIntOrNull() ?: 20
-                    currentFontSize = fontSize
-                    updateOverlayFontSize(fontSize)
-                    // Notify MainActivity
-                    val intent = Intent(ACTION_UPDATE_FONT_SIZE)
-                    intent.putExtra(EXTRA_FONT_SIZE, fontSize)
-                    LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
-                }
-            })
+            controlPanel = overlayView.findViewById(R.id.controlPanel)     // 2.8: Get control panel views
+            editMin = overlayView.findViewById(R.id.editMin)
+            editSec = overlayView.findViewById(R.id.editSec)
             
             textViewOverlaySubtitle.setOnClickListener {
                 Log.d(TAG, "Subtitle clicked - toggle pause!")
@@ -210,32 +167,45 @@ class OverlayService : Service() {
             stopSelf()
         }
     }
+    
+    private fun sendTimeToMainFromOverlay(min: Int, sec: Int) {
+        val totalMs = (min * 60 + sec) * 1000L
+        val intent = Intent(OverlayService.ACTION_OVERLAY_SEEK)
+        intent.putExtra("seek_to_ms", totalMs)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+    editSec.addTextChangedListener(object : android.text.TextWatcher {
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        override fun afterTextChanged(s: android.text.Editable?) {
+            val minVal = editMin.text.toString().toIntOrNull() ?: 0
+            val secVal = s?.toString()?.toIntOrNull() ?: 0
+            if (secVal in 0..59) {
+                sendTimeToMainFromOverlay(minVal, secVal)
+            } else {
+                // 超出 0–59：你可以清空或 clamp
+                // s?.clear()
+            }
+        }
+    })
+    
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                "字幕懸浮視窗服務",
-                NotificationManager.IMPORTANCE_LOW  // LOW 不會發出聲音
+            val channel = NotificationChannel( NOTIFICATION_CHANNEL_ID, "字幕懸浮視窗服務", NotificationManager.IMPORTANCE_LOW  // LOW 不會發出聲音
             ).apply {
                 description = "保持字幕懸浮視窗在背景運行"
                 setShowBadge(false)
             }
-            
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
         }
     }
-    
     private fun createNotification(): android.app.Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        
+        }        
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        
+            this, 0, intent,PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("字幕懸浮視窗運行中")
             .setContentText("點擊返回應用")
@@ -244,24 +214,6 @@ class OverlayService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)  // 無法被滑掉
             .build()
-    }
-    
-    private fun setupOverlaySpeedSpinner() {
-        val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        overlaySpinnerSpeed.adapter = adapter
-        overlaySpinnerSpeed.setSelection(2) // Default 1.0x
-        
-        overlaySpinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                Log.d(TAG, "Speed changed to position: $position")// Notify MainActivity of speed change would go here
-                val intent = Intent(ACTION_OVERLAY_SPEED_CHANGE)// ✅ 需要加：發送 broadcast 給 MainActivity
-                intent.putExtra("speed_position", position)
-                LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
