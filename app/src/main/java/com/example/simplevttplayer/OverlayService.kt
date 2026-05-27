@@ -54,10 +54,6 @@ class OverlayService : Service() {
         const val EXTRA_FONT_SIZE = "font_size"
         const val NOTIFICATION_CHANNEL_ID = "overlay_service_channel"        // 2.8: Foreground service notification constants
         const val NOTIFICATION_ID = 1001
-        // 新增 3 個 actions
-        const val ACTION_OVERLAY_SPEED_CHANGE = "com.example.simplevttplayer.OVERLAY_SPEED_CHANGE"
-        const val ACTION_OVERLAY_SEEK = "com.example.simplevttplayer.OVERLAY_SEEK"
-        const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME" // MainActivity → Overlay
         val TAG: String = OverlayService::class.java.simpleName
     }
     private lateinit var windowManager: WindowManager
@@ -160,7 +156,6 @@ class OverlayService : Service() {
                 addAction(ACTION_PAUSE_PLAY)
                 addAction(ACTION_RESET_OVERLAY_POSITION)
                 addAction(ACTION_UPDATE_FONT_SIZE)
-                addAction(ACTION_UPDATE_TIME) // ✅ 加這個
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter)
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
