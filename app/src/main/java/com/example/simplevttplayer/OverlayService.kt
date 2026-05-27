@@ -77,11 +77,6 @@ class OverlayService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.d(TAG, "Broadcast received! Action: ${intent?.action}")
             when (intent?.action) {
-                ACTION_UPDATE_TIME -> {
-                    val currentTime = intent.getLongExtra("current_time_ms", 0L)
-                    overlaySeekBar.progress = currentTime.toInt()
-                    overlayTextTime.text = formatTime(currentTime)
-                }
                 ACTION_UPDATE_SUBTITLE -> {
                     val subtitleText = intent.getStringExtra(EXTRA_SUBTITLE_TEXT) ?: ""
                     Log.d(TAG, "Received subtitle broadcast: '$subtitleText'")
@@ -118,6 +113,15 @@ class OverlayService : Service() {
             controlPanel = overlayView.findViewById(R.id.controlPanel)     // 2.8: Get control panel views
             editMin = overlayView.findViewById(R.id.editMin)
             editSec = overlayView.findViewById(R.id.editSec)
+            editSec.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: android.text.Editable?) {
+                    val minVal = editMin.text.toString().toIntOrNull() ?: 0
+                    val secVal = s?.toString()?.toIntOrNull() ?: 0
+                    if (secVal in 0..59) {sendTimeToMainFromOverlay(minVal, secVal)
+                    } else {s?.clear()}}// 超出 0–59：你可以清空或 clamp
+            })
             
             textViewOverlaySubtitle.setOnClickListener {
                 Log.d(TAG, "Subtitle clicked - toggle pause!")
@@ -174,20 +178,6 @@ class OverlayService : Service() {
         intent.putExtra("seek_to_ms", totalMs)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
-    editSec.addTextChangedListener(object : android.text.TextWatcher {
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        override fun afterTextChanged(s: android.text.Editable?) {
-            val minVal = editMin.text.toString().toIntOrNull() ?: 0
-            val secVal = s?.toString()?.toIntOrNull() ?: 0
-            if (secVal in 0..59) {
-                sendTimeToMainFromOverlay(minVal, secVal)
-            } else {
-                // 超出 0–59：你可以清空或 clamp
-                // s?.clear()
-            }
-        }
-    })
     
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
