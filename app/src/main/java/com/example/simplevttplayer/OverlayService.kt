@@ -129,7 +129,18 @@ class OverlayService : Service() {
                         overlayTextTime.text = formatTime(progress.toLong())
                     }
                 }
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {                    // ❌ 目前缺少這個 - 應該暫停播放或通知 MainActivity
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                    val intent = Intent(ACTION_PAUSE_PLAY).apply {     // 通知 MainActivity 先暫停播放
+                        putExtra("is_paused", true)
+                    }
+                    LocalBroadcastManager.getInstance(this@OverlayService).sendBroadcast(intent)
+                    if (!isPaused) {                    // 本地同步 isPaused 狀態與 UI
+                        isPaused = true
+                        updateSubtitlePauseState()
+                        if (::controlPanel.isInitialized) {
+                            controlPanel.visibility = View.VISIBLE
+                        }
+                    }
                 }
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {
                     val intent = Intent(ACTION_OVERLAY_SEEK)
