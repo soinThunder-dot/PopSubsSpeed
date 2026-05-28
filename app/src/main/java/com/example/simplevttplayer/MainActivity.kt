@@ -489,6 +489,9 @@ class MainActivity : AppCompatActivity() {
             addAction(OverlayService.ACTION_OVERLAY_SEEK)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
+        
+        val deathFilter = IntentFilter("OVERLAY_SERVICE_DIED")
+        LocalBroadcastManager.getInstance(this).registerReceiver(overlayDeathReceiver, deathFilter)
     }
 
     private fun setupSliderListener() {
@@ -713,6 +716,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val overlayDeathReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (isOverlayUIShown && checkOverlayPermission()) {// 如果 overlay UI flag 是開的，就重啟 Service
+                startOverlayService()                // 重新推一次當前字幕給 overlay
+                sendSubtitleUpdate(textViewSubtitle.text.toString())
+            }
+        }
+    }
+    
     private fun findCueForTime(time: Long): SubtitleCue? = subtitleCues.find { time >= it.startTimeMs && time < it.endTimeMs }
 
     private fun formatTime(ms: Long): String {
