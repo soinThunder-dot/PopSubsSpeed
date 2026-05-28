@@ -189,6 +189,8 @@ class OverlayService : Service() {
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "Receiver possibly already unregistered or not registered.", e)
         }
+        val dieIntent = Intent("OVERLAY_SERVICE_DIED")//監聽 Service 死掉，MainActivity 可以收到
+        LocalBroadcastManager.getInstance(this).sendBroadcast(dieIntent)
     }
     
     private fun updateSubtitleText(text: String) {
