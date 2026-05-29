@@ -12,38 +12,41 @@
 package com.example.simplevttplayer
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.util.Log
+import android.view.View
+import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import java.io.BufferedReader
-import java.io.InputStream
-import android.os.Build
-import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.google.android.material.slider.Slider.OnChangeListener
 import com.google.android.material.slider.Slider.OnSliderTouchListener
-import android.view.View
-import android.view.WindowManager
-import androidx.core.content.ContextCompat
-import com.google.android.material.button.MaterialButton
-import android.widget.Spinner
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
+import java.io.BufferedReader
+import java.io.InputStream
+import java.net.URLEncoder
 
 class MainActivity : AppCompatActivity() {
     companion object {    // 【Companion Object】靜態常數與類別級別變數
@@ -68,7 +71,10 @@ class MainActivity : AppCompatActivity() {
          *          * 觸發時機：         * - 播放期間，每 3 分鐘自動儲存一次當前進度
          * - startPlayback() 時啟動定時器         * - pausePlayback() 時停止定時器（並立即儲存一次）         */
         private const val AUTO_SAVE_INTERVAL_MS = 180_000L
+        private const val GOOGLE_BASE = "https://www.google.com/search?udm=14&q="// Google 搜尋 base URL（固定帶 udm=14）+站台 group
+        private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org)"
     }
+    private lateinit var editTextQuery: EditText
     // 【ActivityResultLauncher】檔案選擇器 & 權限請求啟動器
     /**     * 【Overlay 權限請求啟動器】     * 用途：請求 SYSTEM_ALERT_WINDOW 權限（顯示在其他應用上層）
      *      * 流程：     * 1. 使用者點擊「啟動 Overlay」按鈕     * 2. checkOverlayPermission() 檢查權限
@@ -391,7 +397,11 @@ class MainActivity : AppCompatActivity() {
         sliderPlayback = findViewById(R.id.sliderPlayback)
         spinnerSpeed = findViewById(R.id.spinnerSpeed)        
         // Overlay 控制
-        editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize)        // ===============================================================================
+        editTextOverlayFontSize = findViewById(R.id.editTextOverlayFontSize)       
+        editTextQuery = findViewById(R.id.editTextQuery)
+        editTextQuery.setOnEditorActionListener { _, actionId, _ ->       // 監聽鍵盤上的 Search / Enter
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                doSearch() true    /** 告訴系統「已處理」*/ } else { false }}  // 交給系統預設處理        
         // 【階段 3】按鈕監聽器        // ===============================================================================        
         /**         * 【選擇檔案按鈕】         * 開啟系統檔案選擇器（SAF）         */
         buttonSelectFile.setOnClickListener {
@@ -493,6 +503,17 @@ class MainActivity : AppCompatActivity() {
         val deathFilter = IntentFilter("OVERLAY_SERVICE_DIED")
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayDeathReceiver, deathFilter)
     }
+    
+    private fun buildGoogleSearchUrl(query: String): String {//把「使用者輸入 + site group」組成 Google 搜尋網址。
+        val raw = "$query $SITE_GROUP_ALL"
+        val encoded = URLEncoder.encode(raw, "UTF-8")
+        return GOOGLE_BASE + encoded }
+    private fun doSearch() {
+        val query = editTextQuery.text.toString().trim()
+        if (query.isEmpty()) return
+        val url = buildGoogleSearchUrl(query)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        startActivity(intent) }  // 系統會用使用者的預設瀏覽器開啟[web:17][web:21][web:28]
 
     private fun setupSliderListener() {
         sliderPlayback.addOnChangeListener { _, value, fromUser ->
