@@ -401,7 +401,9 @@ class MainActivity : AppCompatActivity() {
         editTextQuery = findViewById(R.id.editTextQuery)
         editTextQuery.setOnEditorActionListener { _, actionId, _ ->       // 監聽鍵盤上的 Search / Enter
             if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
-                doSearch() true    /** 告訴系統「已處理」*/ } else { false }}  // 交給系統預設處理        
+                doSearch()  /** 告訴系統「已處理」*/
+                true } else { false }  // 交給系統預設處理     
+        }   
         // 【階段 3】按鈕監聽器        // ===============================================================================        
         /**         * 【選擇檔案按鈕】         * 開啟系統檔案選擇器（SAF）         */
         buttonSelectFile.setOnClickListener {
