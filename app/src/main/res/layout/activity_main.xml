@@ -31,7 +31,7 @@
         android:id="@+id/buttonTryNextEp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Try next ep" />
+        android:text="Find next ep" />
     </LinearLayout>
 
     <!-- 檔案選擇 + 搜尋輸入框：同一行 -->
