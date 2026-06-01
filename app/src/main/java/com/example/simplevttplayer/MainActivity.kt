@@ -801,7 +801,13 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Next from $source", Toast.LENGTH_SHORT).show()
         val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
         // 先用 ContentResolver 查出目前檔名
-        val cursor = contentResolver.query( currentUri, arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)
+        val cursor = contentResolver.query(
+            currentUri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )      
         val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
         } ?: run {
             Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
