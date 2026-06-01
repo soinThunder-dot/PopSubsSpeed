@@ -199,7 +199,6 @@ class OverlayService : Service() {
         }
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(subtitleUpdateReceiver)
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(overlayNextEpReceiver)
             Log.d(TAG, "SubtitleUpdateReceiver unregistered.")
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "Receiver possibly already unregistered or not registered.", e)
