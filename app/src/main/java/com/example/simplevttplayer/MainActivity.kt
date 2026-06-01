@@ -780,7 +780,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun incrementLastDigitInName(fileName: String): String {
-        Log.d(TAG, "incrementLastDigitInName: input=$fileName, output=$newNamePart$extPart")
         val dotIndex = fileName.lastIndexOf('.')    // 先拆掉副檔名
         val namePart = if (dotIndex != -1) fileName.substring(0, dotIndex) else fileName
         val extPart = if (dotIndex != -1) fileName.substring(dotIndex) else ""
@@ -794,11 +793,12 @@ class MainActivity : AppCompatActivity() {
             val incremented = (number + 1).toString().padStart(numberStr.length, '0')
             val newNamePart =  namePart.substring(0, start) + incremented + namePart.substring(end + 1)
             return newNamePart + extPart 
+            Log.d(TAG, "incrementLastDigitInName: input=$fileName, output=$newNamePart$extPart")
         } else { return fileName }        // 沒有數字就不動
     }
     private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
         Log.d(TAG, "tryLoadNextEpisode() called")
-        Toast.makeText(this, "Next from $source", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
         val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
         // 先用 ContentResolver 查出目前檔名
         val cursor = contentResolver.query( currentUri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)      
