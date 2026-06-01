@@ -263,9 +263,6 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putString(KEY_LAST_SUBTITLE_URI, uri.toString()).apply()
         Log.d(TAG, "Subtitle file selected: $uri")
-        val overlayIntent = Intent(OverlayService.ACTION_UPDATE_SUBTITLE_URI).apply {//新增，通知 OverlayService 現在的字幕 URI
-            putExtra(OverlayService.EXTRA_SUBTITLE_URI, uri.toString()) }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(overlayIntent)
         // 步驟 2 & 3：清空舊資料並重設
         subtitleCues = emptyList()  // 清空舊字幕列表
         resetPlayback()             // 第一次重設
@@ -782,42 +779,42 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun incrementLastDigitInName(fileName: String): String {
-    val dotIndex = fileName.lastIndexOf('.')    // 先拆掉副檔名
-    val namePart = if (dotIndex != -1) fileName.substring(0, dotIndex) else fileName
-    val extPart = if (dotIndex != -1) fileName.substring(dotIndex) else ""
-    val regex = Regex("(\\d+)(?!.*\\d)")    // 從右邊找連續的數字
-    val match = regex.find(namePart)
-    if (match != null) {
-        val numberStr = match.value
-        val start = match.range.first
-        val end = match.range.last
-        val number = numberStr.toLongOrNull() ?: return fileName
-        val incremented = (number + 1).toString().padStart(numberStr.length, '0')
-        val newNamePart =  namePart.substring(0, start) + incremented + namePart.substring(end + 1)
-        return newNamePart + extPart } 
-    else { return fileName }        // 沒有數字就不動
-    }
-    private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
-        val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-        // 先用 ContentResolver 查出目前檔名
-        val cursor = contentResolver.query( currentUri, arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null ）
-        val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
-        } ?: run {
-            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-            return }
-        val targetName = incrementLastDigitInName(currentName)
-        val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
-        val parentDoc = currentDoc?.parentFile
-        if (parentDoc == null || !parentDoc.isDirectory) {
-            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-            return
+        val dotIndex = fileName.lastIndexOf('.')    // 先拆掉副檔名
+        val namePart = if (dotIndex != -1) fileName.substring(0, dotIndex) else fileName
+        val extPart = if (dotIndex != -1) fileName.substring(dotIndex) else ""
+        val regex = Regex("(\\d+)(?!.*\\d)")    // 從右邊找連續的數字
+        val match = regex.find(namePart)
+        if (match != null) {
+            val numberStr = match.value
+            val start = match.range.first
+            val end = match.range.last
+            val number = numberStr.toLongOrNull() ?: return fileName
+            val incremented = (number + 1).toString().padStart(numberStr.length, '0')
+            val newNamePart =  namePart.substring(0, start) + incremented + namePart.substring(end + 1)
+            return newNamePart + extPart } 
+        else { return fileName }        // 沒有數字就不動
         }
-        val children = parentDoc.listFiles()
-        val targetDoc = children.firstOrNull { it.name == targetName }
-        if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
-            lastSubtitleUri = targetDoc.uri            // 找到下一集，直接當成新的字幕檔載入
-            handleSubtitleFileSelected(targetDoc.uri)
-        } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
+        private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
+            val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+            // 先用 ContentResolver 查出目前檔名
+            val cursor = contentResolver.query( currentUri, arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null )
+            val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
+            } ?: run {
+                Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+                return }
+            val targetName = incrementLastDigitInName(currentName)
+            val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
+            val parentDoc = currentDoc?.parentFile
+            if (parentDoc == null || !parentDoc.isDirectory) {
+                Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val children = parentDoc.listFiles()
+            val targetDoc = children.firstOrNull { it.name == targetName }
+            if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
+                lastSubtitleUri = targetDoc.uri            // 找到下一集，直接當成新的字幕檔載入
+                handleSubtitleFileSelected(targetDoc.uri)
+            } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
     }
 
     
