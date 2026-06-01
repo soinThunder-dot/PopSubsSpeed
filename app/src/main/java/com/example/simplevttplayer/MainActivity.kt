@@ -792,19 +792,18 @@ class MainActivity : AppCompatActivity() {
     else { return fileName }        // 沒有數字就不動
     }
     private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
-        val currentUri = lastSubtitleUri
-        if (currentUri == null) return Toast.makeText(this, "none", Toast.LENGTH_SHORT).show()
+        val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
         // 先用 ContentResolver 查出目前檔名
         val cursor = contentResolver.query( currentUri, arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null ）
         val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
         } ?: run {
-            Toast.makeText(this, "none", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
             return }
         val targetName = incrementLastDigitInName(currentName)
         val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
         val parentDoc = currentDoc?.parentFile
         if (parentDoc == null || !parentDoc.isDirectory) {
-            Toast.makeText(this, "none", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
             return
         }
         val children = parentDoc.listFiles()
