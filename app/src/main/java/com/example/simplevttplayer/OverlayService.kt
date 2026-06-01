@@ -116,12 +116,21 @@ class OverlayService : Service() {
                     if (secVal in 0..59) {sendTimeToMainFromOverlay(minVal, secVal)
                     } else {s?.clear()}}// 超出 0–59：你可以清空或 clamp
             })
+            // 讓 EditText 點擊時會拿到焦點並叫出軟鍵盤
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            val focusListener = View.OnFocusChangeListener { v, hasFocus ->
+                if (hasFocus) { imm.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) } }
+            editMin.onFocusChangeListener = focusListener
+            editSec.onFocusChangeListener = focusListener
+            editMin.setOnClickListener { editMin.requestFocus()
+                imm.showSoftInput(editMin, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) }
+            editSec.setOnClickListener { editSec.requestFocus()
+                imm.showSoftInput(editSec, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) }
             
             textViewOverlaySubtitle.setOnClickListener {
                 Log.d(TAG, "Subtitle clicked - toggle pause!")
                 togglePauseFromOverlay()
             }
-            
             val buttonMoveUp: View? = overlayView.findViewById(R.id.buttonMoveUp)
             buttonMoveUp?.setOnClickListener {
                 Log.d(TAG, "Move up button clicked!")
@@ -129,7 +138,6 @@ class OverlayService : Service() {
             }
             
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-            
             params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
