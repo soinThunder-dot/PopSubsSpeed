@@ -106,13 +106,6 @@ class MainActivity : AppCompatActivity() {
     }
     /**     * 【2.8 新增】Overlay 控制面板接收器     * 
      * 監聽事件：
-     * 1. OverlayService.ACTION_OVERLAY_SPEED_CHANGE - 速度變更     * 2. OverlayService.ACTION_OVERLAY_SEEK - 進度跳轉
-     *      * 使用場景：     * - 使用者在 Overlay 控制面板調整播放參數     * - Overlay 發送廣播通知 MainActivity 同步
-     * ===== ACTION_OVERLAY_SPEED_CHANGE =====
-     * Intent Extra：     * - "speed_position" (Int) - Spinner 位置索引 (0-5)
-     *   - 0 = 0.5x     *   - 1 = 0.75x     *   - 2 = 1.0x (預設)     *   - 3 = 1.25x     *   - 4 = 1.5x     *   - 5 = 2.0x
-     * 處理邏輯：     * - 直接設定 MainActivity 的 spinnerSpeed.setSelection()
-     * - Spinner 的 onItemSelected 會自動更新 playbackSpeed     * - 無需手動計算 startTimeNanos（Spinner listener 已處理）
      * ===== ACTION_OVERLAY_SEEK =====
      * Intent Extra：     * - "seek_to_ms" (Long) - 目標時間（毫秒）     * 
      * 處理邏輯：     * 1. 更新 pausedElapsedTimeMillis = seekToMs     * 2. 重新計算 startTimeNanos（當前系統時間 - 目標時間）
@@ -134,6 +127,9 @@ class MainActivity : AppCompatActivity() {
                     val newText = cue?.text ?: ""// 3. 找出此時間點對應的字幕，更新主畫面 + 通知 Overlay
                     textViewSubtitle.text = newText
                     sendSubtitleUpdate(newText)
+                }
+                OverlayService.ACTION_NEXT_EP -> {
+                    tryLoadNextEpisode()
                 }
             }
         }
@@ -262,6 +258,9 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putString(KEY_LAST_SUBTITLE_URI, uri.toString()).apply()
         Log.d(TAG, "Subtitle file selected: $uri")
+        val overlayIntent = Intent(OverlayService.ACTION_UPDATE_SUBTITLE_URI).apply {//新增，通知 OverlayService 現在的字幕 URI
+            putExtra(OverlayService.EXTRA_SUBTITLE_URI, uri.toString()) }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(overlayIntent)
         // 步驟 2 & 3：清空舊資料並重設
         subtitleCues = emptyList()  // 清空舊字幕列表
         resetPlayback()             // 第一次重設
