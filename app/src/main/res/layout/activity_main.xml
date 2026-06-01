@@ -21,30 +21,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Reload last file" />
-
-    <!-- 中間空白撐開，把 EditText 推到右邊 -->
+    <!-- 中間空白撐開，把 NextEP 推到右邊 -->
     <Space
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1" />
-  <!-- JAP 切換：點擊開關 Kuromoji 高亮 -->
-    <TextView
-        android:id="@+id/textViewJpToggle"
+    <!-- 新的 Try next ep 按鈕 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/buttonTryNextEp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="JAP"
-        android:textSize="12sp"
-        android:textColor="#4CAF50"
-        android:padding="4dp" />
-    <EditText
-        android:id="@+id/editTextOverlayFontSize"
-        android:layout_width="70dp"
-        android:layout_height="40dp"
-        android:layout_marginEnd="8dp"
-        android:inputType="number"
-        android:hint="Font"
-        android:text="20" />
-
+        android:text="Try next ep" />
     </LinearLayout>
 
     <!-- 檔案選擇 + 搜尋輸入框：同一行 -->
@@ -96,11 +83,32 @@
             android:text="Speed:"
             android:textAppearance="?attr/textAppearanceBody1"
             android:layout_marginEnd="8dp" />
-
         <Spinner
             android:id="@+id/spinnerSpeed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
+        <!-- 中間空白撐開，把 EditText 推到右邊 -->
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+        <!-- JAP 切換：點擊開關 Kuromoji 高亮 -->
+        <TextView
+            android:id="@+id/textViewJpToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="JAP"
+            android:textSize="12sp"
+            android:textColor="#9E9E9E"
+            android:padding="4dp" />
+        <EditText
+            android:id="@+id/editTextOverlayFontSize"
+            android:layout_width="70dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:inputType="number"
+            android:hint="Font"
+            android:text="20" />
     </LinearLayout>
 
     <!-- Main timer (real elapsed time) -->
