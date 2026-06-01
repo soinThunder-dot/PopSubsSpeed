@@ -798,7 +798,6 @@ class MainActivity : AppCompatActivity() {
     }
     private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
         Log.d(TAG, "tryLoadNextEpisode() called")
-        Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
         val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
         // 先用 ContentResolver 查出目前檔名
         val cursor = contentResolver.query( currentUri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)      
@@ -806,6 +805,7 @@ class MainActivity : AppCompatActivity() {
         } ?: run {
             Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
             return }
+        Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
         val targetName = incrementLastDigitInName(currentName) 
         Log.d(TAG, """Closest file is "$targetName" , Cant find""")   // 就你要的這一句，直接用 targetName
         val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
