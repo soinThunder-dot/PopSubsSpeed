@@ -109,11 +109,16 @@ class OverlayService : Service() {
             controlPanel = overlayView.findViewById(R.id.controlPanel)     // 2.8: Get control panel views
             editMin = overlayView.findViewById(R.id.editMin)
             editSec = overlayView.findViewById(R.id.editSec)
-            buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp)
-            buttonOverlayNextEp.setOnClickListener {
-                val intent = Intent(ACTION_NEXT_EP)
-                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            fun enableOverlayInput(target: View) {// 讓 overlay window 處於可接鍵盤的狀態（flags 只保留 LAYOUT_IN_SCREEN）
+                params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                windowManager.updateViewLayout(overlayView, params)
+                target.requestFocus()
+                imm.showSoftInput(target, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
             }
+            editMin.setOnClickListener { enableOverlayInput(editMin)  }
+            editSec.setOnClickListener { enableOverlayInput(editSec)  }
+            
             editSec.addTextChangedListener(object : android.text.TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -123,16 +128,12 @@ class OverlayService : Service() {
                     if (secVal in 0..59) {sendTimeToMainFromOverlay(minVal, secVal)
                     } else {s?.clear()}}// 超出 0–59：你可以清空或 clamp
             })
-            // 讓 EditText 點擊時會拿到焦點並叫出軟鍵盤
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            val focusListener = View.OnFocusChangeListener { v, hasFocus ->
-                if (hasFocus) { imm.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) } }
-            editMin.onFocusChangeListener = focusListener
-            editSec.onFocusChangeListener = focusListener
-            editMin.setOnClickListener { editMin.requestFocus()
-                imm.showSoftInput(editMin, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) }
-            editSec.setOnClickListener { editSec.requestFocus()
-                imm.showSoftInput(editSec, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) }
+            
+            buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp)
+            buttonOverlayNextEp.setOnClickListener {
+                val intent = Intent(ACTION_NEXT_EP)
+                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            }
             
             textViewOverlaySubtitle.setOnClickListener {
                 Log.d(TAG, "Subtitle clicked - toggle pause!")
@@ -150,7 +151,7 @@ class OverlayService : Service() {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,  // 或你之前用的 TYPE_PHONE
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or // 先移除 FLAG_NOT_FOCUSABLE
-                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,  // 讓軟鍵盤可以針對這個 window 顯示
+                //WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,  // 讓軟鍵盤可以針對這個 window 顯示
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
