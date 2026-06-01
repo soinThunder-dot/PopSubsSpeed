@@ -66,6 +66,7 @@ class OverlayService : Service() {
     private lateinit var controlPanel: View
     private lateinit var editMin: EditText
     private lateinit var editSec: EditText
+    private lateinit var buttonOverlayNextEp: View
     
     private var currentSubtitle = ""
     private var currentFontSize = 20
@@ -108,8 +109,9 @@ class OverlayService : Service() {
             controlPanel = overlayView.findViewById(R.id.controlPanel)     // 2.8: Get control panel views
             editMin = overlayView.findViewById(R.id.editMin)
             editSec = overlayView.findViewById(R.id.editSec)
-            overlayView.findViewById<View>(R.id.buttonOverlayNextEp)?.setOnClickListener {
-                val intent = Intent(ACTION_NEXT_EP)            // 這裡：Overlay 上的 Next 按鈕
+            buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp)
+            buttonOverlayNextEp.setOnClickListener {
+                val intent = Intent(ACTION_NEXT_EP)
                 LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
             }
             editSec.addTextChangedListener(object : android.text.TextWatcher {
@@ -229,18 +231,15 @@ class OverlayService : Service() {
     
     private fun togglePauseFromOverlay() {
         isPaused = !isPaused
-        
-        val intent = Intent(ACTION_PAUSE_PLAY).apply {
-            putExtra("is_paused", isPaused)
-        }
+        val intent = Intent(ACTION_PAUSE_PLAY).apply { putExtra("is_paused", isPaused) }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)        
         updateSubtitlePauseState()        
-        // 2.8: Show/hide control panel on pause/resume
-        if (::controlPanel.isInitialized) {
-            controlPanel.visibility = if (isPaused) View.VISIBLE else View.GONE
+        if (::controlPanel.isInitialized) {    // 2.8: Show/hide control panel on pause/resume
+            val vis = if (isPaused) View.VISIBLE else View.GONE
+            controlPanel.visibility = vis
+            if (::buttonOverlayNextEp.isInitialized) { buttonOverlayNextEp.visibility = vis }
             Log.d(TAG, "Control panel visibility: ${if (isPaused) "VISIBLE" else "GONE"}")
         }
-        
         Toast.makeText(this, if (isPaused) "Paused" else "Resumed", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "Pause toggled from overlay: isPaused=$isPaused")
     }
