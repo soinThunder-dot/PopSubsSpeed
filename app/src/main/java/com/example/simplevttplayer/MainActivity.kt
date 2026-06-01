@@ -793,33 +793,33 @@ class MainActivity : AppCompatActivity() {
             val number = numberStr.toLongOrNull() ?: return fileName
             val incremented = (number + 1).toString().padStart(numberStr.length, '0')
             val newNamePart =  namePart.substring(0, start) + incremented + namePart.substring(end + 1)
-            return newNamePart + extPart } 
-        else { return fileName }        // 沒有數字就不動
+            return newNamePart + extPart 
+        } else { return fileName }        // 沒有數字就不動
+    }
+    private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
+        Log.d(TAG, "tryLoadNextEpisode() called")
+        Toast.makeText(this, "Next from $source", Toast.LENGTH_SHORT).show()
+        val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+        // 先用 ContentResolver 查出目前檔名
+        val cursor = contentResolver.query( currentUri, arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)
+        val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
+        } ?: run {
+            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+            return }
+        val targetName = incrementLastDigitInName(currentName) 
+        Log.d(TAG, "Closest file is "$targetName" , Cant find")   // 就你要的這一句，直接用 targetName
+        val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
+        val parentDoc = currentDoc?.parentFile
+        if (parentDoc == null || !parentDoc.isDirectory) {
+            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+            return
         }
-        private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
-            Log.d(TAG, "tryLoadNextEpisode() called")
-            Toast.makeText(this, "Next from $source", Toast.LENGTH_SHORT).show()
-            val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-            // 先用 ContentResolver 查出目前檔名
-            val cursor = contentResolver.query( currentUri, arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null )
-            val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
-            } ?: run {
-                Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-                return }
-            val targetName = incrementLastDigitInName(currentName) 
-            Log.d(TAG, "Closest file is "$targetName" , Cant find")   // 就你要的這一句，直接用 targetName
-            val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
-            val parentDoc = currentDoc?.parentFile
-            if (parentDoc == null || !parentDoc.isDirectory) {
-                Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-                return
-            }
-            val children = parentDoc.listFiles()
-            val targetDoc = children.firstOrNull { it.name == targetName }
-            if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
-                lastSubtitleUri = targetDoc.uri            // 找到下一集，直接當成新的字幕檔載入
-                handleSubtitleFileSelected(targetDoc.uri)
-            } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
+        val children = parentDoc.listFiles()
+        val targetDoc = children.firstOrNull { it.name == targetName }
+        if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
+            lastSubtitleUri = targetDoc.uri            // 找到下一集，直接當成新的字幕檔載入
+            handleSubtitleFileSelected(targetDoc.uri)
+        } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
     }
 
     
