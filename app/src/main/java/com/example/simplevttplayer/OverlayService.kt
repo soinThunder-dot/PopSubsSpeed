@@ -54,6 +54,7 @@ class OverlayService : Service() {
         const val EXTRA_FONT_SIZE = "font_size"
         const val ACTION_OVERLAY_SEEK = "com.example.simplevttplayer.OVERLAY_SEEK"
         const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME"
+        const val ACTION_NEXT_EP = "com.example.simplevttplayer.NEXT_EP"
         val TAG: String = OverlayService::class.java.simpleName
     }
     private lateinit var windowManager: WindowManager
@@ -107,6 +108,10 @@ class OverlayService : Service() {
             controlPanel = overlayView.findViewById(R.id.controlPanel)     // 2.8: Get control panel views
             editMin = overlayView.findViewById(R.id.editMin)
             editSec = overlayView.findViewById(R.id.editSec)
+            overlayView.findViewById<View>(R.id.buttonOverlayNextEp)?.setOnClickListener {
+                val intent = Intent(ACTION_NEXT_EP)            // 這裡：Overlay 上的 Next 按鈕
+                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            }
             editSec.addTextChangedListener(object : android.text.TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
