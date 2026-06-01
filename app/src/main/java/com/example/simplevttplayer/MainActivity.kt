@@ -104,6 +104,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    private val overlayNextEpReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == OverlayService.ACTION_NEXT_EP) { tryLoadNextEpisode() }
+        }
+    }
     /**     * 【2.8 新增】Overlay 控制面板接收器     * 
      * 監聽事件：
      * ===== ACTION_OVERLAY_SEEK =====
@@ -506,6 +511,8 @@ class MainActivity : AppCompatActivity() {
         
         val deathFilter = IntentFilter("OVERLAY_SERVICE_DIED")
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayDeathReceiver, deathFilter)
+        val nextEpFilter = IntentFilter(OverlayService.ACTION_NEXT_EP)
+        LocalBroadcastManager.getInstance(this).registerReceiver(overlayNextEpReceiver, nextEpFilter)
     }
     
     private fun buildGoogleSearchUrl(query: String): String {//把「使用者輸入 + site group」組成 Google 搜尋網址。
