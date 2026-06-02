@@ -2,10 +2,12 @@ name: Build APK
 
 on:
   push:
-    branches: [ master ]
+    paths:
+      - 'app/build.gradle'   # 只有這個檔被改動才觸發
   pull_request:
-    branches: [ master ]
-  workflow_dispatch:
+    paths:
+      - '.github/workflows/build.yml'   # 開 PR 且有改這個檔，也會觸發
+  workflow_dispatch:                    # 手動依然可以跑
 
 jobs:
   build:
@@ -29,5 +31,5 @@ jobs:
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
+        name: app-popsubs-${{ github.run_number }}
         path: app/build/outputs/apk/debug/app-debug.apk
