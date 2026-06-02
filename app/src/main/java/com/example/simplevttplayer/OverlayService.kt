@@ -89,16 +89,12 @@ class OverlayService : Service() {
                     Log.d(TAG, "Received font size update: $fontSize")
                     updateOverlayFontSize(fontSize)
                 }
-                else -> {
-                    Log.w(TAG, "Unknown broadcast action: ${intent?.action}")
-                }
+                else -> {  Log.w(TAG, "Unknown broadcast action: ${intent?.action}")  }
             }
         }
     }
     
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? {  return null  }
     
     override fun onCreate() {
         super.onCreate()
@@ -110,14 +106,16 @@ class OverlayService : Service() {
             editMin = overlayView.findViewById(R.id.editMin)
             editSec = overlayView.findViewById(R.id.editSec)
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            fun enableOverlayInput(target: View) {// 讓 overlay window 處於可接鍵盤的狀態（flags 只保留 LAYOUT_IN_SCREEN）
-                params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                windowManager.updateViewLayout(overlayView, params)
-                target.requestFocus()
-                imm.showSoftInput(target, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
+            editMin.setOnClickListener {
+                enableOverlayInput()
+                editMin.requestFocus()
+                imm.showSoftInput(editMin, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
             }
-            editMin.setOnClickListener { enableOverlayInput(editMin)  }
-            editSec.setOnClickListener { enableOverlayInput(editSec)  }
+            editSec.setOnClickListener {
+                enableOverlayInput()
+                editSec.requestFocus()
+                imm.showSoftInput(editSec, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
+            }
             
             editSec.addTextChangedListener(object : android.text.TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -126,7 +124,8 @@ class OverlayService : Service() {
                     val minVal = editMin.text.toString().toIntOrNull() ?: 0
                     val secVal = s?.toString()?.toIntOrNull() ?: 0
                     if (secVal in 0..59) {sendTimeToMainFromOverlay(minVal, secVal)
-                    } else {s?.clear()}}// 超出 0–59：你可以清空或 clamp
+                    } else {s?.clear() }// 超出 0–59：你可以清空或 clamp
+                    disableOverlayInput() } // 一次輸入完就關輸入模式
             })
             
             buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp)
@@ -150,8 +149,8 @@ class OverlayService : Service() {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,  // 或你之前用的 TYPE_PHONE
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, //or// 先移除 FLAG_NOT_FOCUSABLE
-                //WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,  // 讓軟鍵盤可以針對這個 window 顯示
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN    or// 先移除 FLAG_NOT_FOCUSABLE
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,  // 讓軟鍵盤可以針對這個 window 顯示
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
@@ -159,7 +158,7 @@ class OverlayService : Service() {
             }
             windowManager.addView(overlayView, params)
             Log.d(TAG, "Overlay view added successfully.")
-            
+        
             val filter = IntentFilter().apply {
                 addAction(ACTION_UPDATE_SUBTITLE)
                 addAction(ACTION_PAUSE_PLAY)
@@ -168,7 +167,6 @@ class OverlayService : Service() {
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter)
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
-            
         } catch (e: Exception) {
             Log.e(TAG, "Error during OverlayService onCreate", e)
             Toast.makeText(this, "Failed to create overlay.", Toast.LENGTH_SHORT).show()
@@ -192,20 +190,15 @@ class OverlayService : Service() {
         super.onDestroy()    
         Log.d(TAG, "OverlayService onDestroy")
         stopForeground(true)  // 2.8: 移除通知
-        try {
-            if (::overlayView.isInitialized && overlayView.isAttachedToWindow) {
+        try { if (::overlayView.isInitialized && overlayView.isAttachedToWindow) {
                 windowManager.removeView(overlayView)
                 Log.d(TAG, "Overlay view removed.")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error removing overlay views", e)
-        }
+              }
+        } catch (e: Exception) {  Log.e(TAG, "Error removing overlay views", e) }
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(subtitleUpdateReceiver)
             Log.d(TAG, "SubtitleUpdateReceiver unregistered.")
-        } catch (e: IllegalArgumentException) {
-            Log.w(TAG, "Receiver possibly already unregistered or not registered.", e)
-        }
+        } catch (e: IllegalArgumentException) { Log.w(TAG, "Receiver possibly already unregistered or not registered.", e)  }
         val dieIntent = Intent("OVERLAY_SERVICE_DIED")//監聽 Service 死掉，MainActivity 可以收到
         LocalBroadcastManager.getInstance(this).sendBroadcast(dieIntent)
     }
@@ -214,20 +207,14 @@ class OverlayService : Service() {
         if (::textViewOverlaySubtitle.isInitialized && ::overlayView.isInitialized) {
             currentSubtitle = text
             if (text.isBlank()) {
-                if (overlayView.visibility != View.GONE) {
-                    Log.d(TAG, "Hiding overlay view (blank text received).")
-                }
-            } else {
-                if (overlayView.visibility != View.VISIBLE) {
-                    Log.d(TAG, "Showing overlay view.")
-                    overlayView.visibility = View.VISIBLE
-                }
+                if (overlayView.visibility != View.GONE) { Log.d(TAG, "Hiding overlay view (blank text received).") }
+            } else { if (overlayView.visibility != View.VISIBLE) {
+                        Log.d(TAG, "Showing overlay view.")
+                        overlayView.visibility = View.VISIBLE  }
                 val styled: CharSequence = JpGrammarHighlighter.highlight(text)
                 textViewOverlaySubtitle.text = styled
             }
-        } else {
-            Log.w(TAG, "Overlay views not initialized when trying to update text ('$text').")
-        }
+        } else {  Log.w(TAG, "Overlay views not initialized when trying to update text ('$text').") }
     }
     
     private fun togglePauseFromOverlay() {
@@ -259,12 +246,8 @@ class OverlayService : Service() {
             try {
                 windowManager.updateViewLayout(overlayView, params)
                 Log.d(TAG, "Overlay moved up. New Y: ${params.y}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error moving overlay up", e)
-            }
-        } else {
-            Log.w(TAG, "Cannot move overlay: views not initialized")
-        }
+            } catch (e: Exception) {  Log.e(TAG, "Error moving overlay up", e)  }
+        } else {  Log.w(TAG, "Cannot move overlay: views not initialized")  }
     }
     
     private fun resetOverlayPosition() {
@@ -273,12 +256,8 @@ class OverlayService : Service() {
             try {
                 windowManager.updateViewLayout(overlayView, params)
                 Log.d(TAG, "Overlay position reset to Y: 0")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error resetting overlay position", e)
-            }
-        } else {
-            Log.w(TAG, "Cannot move overlay: views not initialized")
-        }
+            } catch (e: Exception) { Log.e(TAG, "Error resetting overlay position", e) }
+        } else { Log.w(TAG, "Cannot move overlay: views not initialized")  }
     }
     
     private fun updateOverlayFontSize(fontSize: Int) {
@@ -292,5 +271,14 @@ class OverlayService : Service() {
     private fun formatTime(ms: Long): String {
         val s = ms / 1000
         return String.format("%02d:%02d.%03d", s / 60, s % 60, ms % 1000)
+    }
+
+    private fun enableOverlayInput() {
+        params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        windowManager.updateViewLayout(overlayView, params)
+    }
+    private fun disableOverlayInput() {
+        params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN  or  WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        windowManager.updateViewLayout(overlayView, params)
     }
 }
