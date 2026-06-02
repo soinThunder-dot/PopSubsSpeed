@@ -123,6 +123,7 @@ class OverlayService : Service() {
                 override fun afterTextChanged(s: android.text.Editable?) {
                     val minVal = editMin.text.toString().toIntOrNull() ?: 0
                     val secVal = s?.toString()?.toIntOrNull() ?: 0
+                    Toast.makeText(this@OverlayService, "Overlay set to %02d:%02d".format(minVal, secVal), Toast.LENGTH_SHORT).show()
                     if (secVal in 0..59) {sendTimeToMainFromOverlay(minVal, secVal)
                     } else {s?.clear() }// 超出 0–59：你可以清空或 clamp
                     disableOverlayInput() } // 一次輸入完就關輸入模式
