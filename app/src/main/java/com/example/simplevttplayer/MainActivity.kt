@@ -143,6 +143,7 @@ class MainActivity : AppCompatActivity() {
     // 【UI 元件】View 引用
     private lateinit var buttonSelectFile: MaterialButton    /** 【按鈕】選擇字幕檔案 */
     private lateinit var buttonReloadLast: MaterialButton  /** 【按鈕】重新載入上次檔案 (2.8: 會恢復上次播放位置) */
+    private lateinit var buttonTryNextEp: MaterialButton //Main 的 NEXT 按鈕 → tryLoadNextEpisode(
     private lateinit var buttonPlayPause: MaterialButton  /** 【按鈕】播放/暫停切換 */
     private lateinit var buttonReset: MaterialButton   /** 【按鈕】重設（回到 00:00.000，清空字幕） */
     private lateinit var buttonLaunchOverlay: MaterialButton    /** 【按鈕】啟動/關閉 Overlay 服務 */
@@ -415,6 +416,7 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Select file button clicked")
             openFilePicker()
         }
+        buttonTryNextEp.setOnClickListener { tryLoadNextEpisode() } //按 Main 那顆「Find next ep」
         /**         * 【Reload Last File 按鈕】         * 重新載入上次使用的字幕檔案         * 2.8 新增：同時恢復上次播放位置         */
         buttonReloadLast.setOnClickListener {
             Log.d(TAG, "Reload last file button clicked")            
@@ -816,6 +818,7 @@ class MainActivity : AppCompatActivity() {
         }
         val children = parentDoc.listFiles()
         val targetDoc = children.firstOrNull { it.name == targetName }
+        Log.d(TAG, "Children in folder: ${children.map { it.name }}")   // ★ 新增：檢查有哪些檔名
         if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
             lastSubtitleUri = targetDoc.uri            // 找到下一集，直接當成新的字幕檔載入
             handleSubtitleFileSelected(targetDoc.uri)
