@@ -121,6 +121,7 @@ class MainActivity : AppCompatActivity() {
             when (intent?.action) {
                 OverlayService.ACTION_OVERLAY_SEEK -> { // Overlay 進度 → MainActivity 跳轉
                     val seekToMs = intent.getLongExtra("seek_to_ms", 0L)
+                    Toast.makeText( this@MainActivity, "Seek to ${formatTime(seekToMs)} from overlay", Toast.LENGTH_SHORT ).show()
                     Log.d(TAG, "Overlay seek to: ${formatTime(seekToMs)}")
                     pausedElapsedTimeMillis = seekToMs// 更新暫停時的累積時間（原始時間）
                     // 重新計算播放開始時間點    // 公式：startTimeNanos = 當前系統時間 - (目標時間 × 1,000,000)
