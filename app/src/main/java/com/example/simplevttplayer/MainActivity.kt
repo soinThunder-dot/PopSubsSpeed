@@ -9,45 +9,45 @@
  * 【關鍵元件】 * - Material Slider：拖曳式進度條，支援即時預覽 * - Spinner：速度選擇下拉選單
  * - ActivityResultLauncher：檔案選擇器 & 權限請求 * - BroadcastReceiver：監聽 Service 事件 * - Handler：30ms 更新循環 + 3分鐘自動儲存
  * @author so-dot @version 2.8_super_overlay @since 2026-05-27 */
-package com.example.simplevttplayer
+package com.example.simplevttplayer      // 整個 app 的 package 名稱，Activity / Service 都在這裡
 
-import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.graphics.Color
-import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.provider.OpenableColumns
-import android.provider.Settings
-import android.util.Log
-import android.view.View
-import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.EditText
-import android.widget.Spinner
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.documentfile.provider.DocumentFile
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.slider.Slider
-import com.google.android.material.slider.Slider.OnChangeListener
-import com.google.android.material.slider.Slider.OnSliderTouchListener
-import java.io.BufferedReader
-import java.io.InputStream
-import java.net.URLEncoder
+import android.annotation.SuppressLint   // 用來壓掉某些 Lint 警告（例如 Range）
+import android.app.Activity              // 只有在需要明寫 Activity.RESULT_OK 等常數時用
+import android.content.BroadcastReceiver // 收 LocalBroadcast / 系統廣播的基底類
+import android.content.Context           // Android 上下文物件（拿資源、preferences 等）
+import android.content.Intent            // 啟動 Activity / Service 或發送廣播用
+import android.content.IntentFilter      // 註冊 BroadcastReceiver 時過濾 Action 用
+import android.graphics.Color            // 直接用整數顏色值（例如 Color.RED）
+import android.net.Uri                   // SAF / Intent 中代表檔案或網址的 URI 型別
+import android.os.Build                  // 判斷系統版本（Build.VERSION.SDK_INT）
+import android.os.Bundle                 // Activity onCreate 的 savedInstanceState
+import android.os.Handler                // 在主執行緒排程 Runnable（更新 UI/計時）
+import android.os.Looper                 // 拿到主執行緒的 Looper（Handler 會用到）
+import android.provider.OpenableColumns  // 用 contentResolver 查 SAF 檔名時用到的欄位常數
+import android.provider.Settings         // 開系統設定頁（例如 overlay 權限）用
+import android.util.Log                  // 寫 Logcat 訊息（Log.d / Log.e 等）
+import android.view.View                 // 所有 View 的基底類，Button/TextView 都繼承它
+import android.view.WindowManager        // 控制 Window flag（KEEP_SCREEN_ON 等）
+import android.view.inputmethod.EditorInfo // 判斷 IME_ACTION_DONE / SEARCH 等鍵盤 action
+import android.widget.AdapterView        // Spinner / ListView 的 onItemSelected 會用到
+import android.widget.ArrayAdapter       // Spinner 用的簡單文字 adapter
+import android.widget.EditText           // 單行/多行文字輸入欄位
+import android.widget.Spinner            // 下拉選單（播放速度選擇）
+import android.widget.TextView           // 顯示文字用的基本 View
+import android.widget.Toast              // 在畫面下方彈出的短訊息
+import androidx.activity.result.ActivityResultLauncher // 新式 Activity 結果回傳 API 的 launcher 型別
+import androidx.activity.result.contract.ActivityResultContracts // 內建 ActivityResult 合約（如 StartActivityForResult）
+import androidx.appcompat.app.AppCompatActivity        // 支援庫版 Activity（Material/Toolbar 等）
+import androidx.core.content.ContextCompat             // 向後相容工具（取 drawable / color 等）
+import androidx.documentfile.provider.DocumentFile     // 操作 SAF 資料夾 / 檔案的包裝類
+import androidx.localbroadcastmanager.content.LocalBroadcastManager // app 內部用的 broadcast manager
+import com.google.android.material.button.MaterialButton // Material Design 風格按鈕
+import com.google.android.material.slider.Slider         // Material Slider（時間軸）
+import com.google.android.material.slider.Slider.OnChangeListener    // Slider 變動監聽介面
+import com.google.android.material.slider.Slider.OnSliderTouchListener// Slider 觸控開始/結束監聽
+import java.io.BufferedReader            // 包裝 InputStream 成逐行讀的 reader
+import java.io.InputStream               // 檔案的原始位元流（SAF 打開字幕檔時用）
+import java.net.URLEncoder               // 將搜尋字串轉成 URL safe 格式（Google 搜尋）
 
 class MainActivity : AppCompatActivity() {
     companion object {    // 【Companion Object】靜態常數與類別級別變數
