@@ -632,6 +632,7 @@ class MainActivity : AppCompatActivity() {
         if (parentDoc == null || !parentDoc.isDirectory)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
         val children = parentDoc.listFiles()              // 列出同資料夾所有檔案
         Log.d(TAG, "Children in folder: ${children.map { it.name }}")
+        children.forEach { child -> Toast.makeText(this, "child: ${child.name}", Toast.LENGTH_SHORT).show() }//看畫面上跑出來的 child: ... 幾個檔名
         val targetDoc = children.firstOrNull { child ->   // 尋找「檔名以 baseNext 開頭」的檔案
             val name = child.name ?: return@firstOrNull false
             name.startsWith(baseNext)                     // 尾巴、版本號、解析度全部忽略
