@@ -62,6 +62,8 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
     private lateinit var editMin: EditText                      // 控制面板上的分鐘輸入框
     private lateinit var editSec: EditText                      // 控制面板上的秒數輸入框
     private lateinit var buttonOverlayNextEp: View              // Overlay 上的「Next Ep」按鈕
+    private var currentSubtitle = ""
+    private var currentFontSize = 20
     
     private val subtitleUpdateReceiver = object : BroadcastReceiver() { // 接收 MainActivity 廣播
         override fun onReceive(context: Context?, intent: Intent?) {
