@@ -274,9 +274,12 @@ class OverlayService : Service() {
         return String.format("%02d:%02d.%03d", s / 60, s % 60, ms % 1000)
     }
 
-    private fun enableOverlayInput() {
+    fun enableOverlayInput(target: View) {
+        if (overlayView.windowToken == null) return  // 還沒 attach，不做
         params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         windowManager.updateViewLayout(overlayView, params)
+        target.requestFocus()
+        imm.showSoftInput(target, InputMethodManager.SHOW_FORCED)
     }
     private fun disableOverlayInput() {
         params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN  or  WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
