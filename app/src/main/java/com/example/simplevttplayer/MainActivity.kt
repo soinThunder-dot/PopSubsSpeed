@@ -517,63 +517,61 @@ class MainActivity : AppCompatActivity() {
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayNextEpReceiver, nextEpFilter)
     }
     
-    private fun buildGoogleSearchUrl(query: String): String {//把「使用者輸入 + site group」組成 Google 搜尋網址。
-        val raw = "$query $SITE_GROUP_ALL"
-        val encoded = URLEncoder.encode(raw, "UTF-8")
-        return GOOGLE_BASE + encoded }
+    private fun buildGoogleSearchUrl(query: String): String { // 把「使用者輸入 + site group」組成 Google 搜尋網址
+        val raw = "$query $SITE_GROUP_ALL"                    // 在原始關鍵字後面加上站台群組條件
+        val encoded = URLEncoder.encode(raw, "UTF-8")         // 用 UTF-8 URL encode 防止空白/特殊字元炸掉
+        return GOOGLE_BASE + encoded   }                       // 接到 Google 搜尋 base URL，變成完整網址
     private fun doSearch() {
-        val query = editTextQuery.text.toString().trim()
-        if (query.isEmpty()) return
-        val url = buildGoogleSearchUrl(query)
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        startActivity(intent) }  // 系統會用使用者的預設瀏覽器開啟[web:17][web:21][web:28]
+        val query = editTextQuery.text.toString().trim()      // 讀輸入框文字並去掉前後空白
+        if (query.isEmpty()) return                           // 空字串就直接不搜尋
+        val url = buildGoogleSearchUrl(query)                 // 依照站台群組組成 Google 搜尋網址
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)) // 建立「用瀏覽器開網址」的 Intent
+        startActivity(intent)   }                              // 系統會用使用者的預設瀏覽器打開
 
     private fun setupSliderListener() {
         sliderPlayback.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) {
-                textViewCurrentTime.text = formatTime((value * playbackSpeed).toLong())
-                textViewYellowTime.text = formatTime(value.toLong())
+            if (fromUser) {                                   // 只在使用者手動拖動時更新顯示
+                textViewCurrentTime.text = formatTime((value * playbackSpeed).toLong()) // 照速度換算後的時間
+                textViewYellowTime.text = formatTime(value.toLong())                    // 原始 slider 位置（未乘速度）
             }
         }
         sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {
-                if (isPlaying) {
+                if (isPlaying) {                              // 正在播放時，一開始拖動就暫停更新
                     isPlaying = false
-                    handler.removeCallbacks(updateRunnable)
+                    handler.removeCallbacks(updateRunnable)   // 停掉自動更新 Runnable
                 }
             }
             override fun onStopTrackingTouch(slider: Slider) {
-                pausedElapsedTimeMillis = slider.value.toLong()
-                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
+                pausedElapsedTimeMillis = slider.value.toLong() // 停止拖動時，把 slider 的值存成暫停時間
+                startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)// 調整 startTimeNanos，讓 resume 播放時從這個時間點繼續
             }
         })
     }
 
     private fun saveCurrentTimestamp() {
-        if (!isPlaying && pausedElapsedTimeMillis == 0L) return  // 未播放過則不儲存
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        prefs.edit().putLong(KEY_LAST_TIMESTAMP, pausedElapsedTimeMillis).apply()
+        if (!isPlaying && pausedElapsedTimeMillis == 0L) return  // 完全沒播過就不用存
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE) // 取得 app SharedPreferences
+        prefs.edit().putLong(KEY_LAST_TIMESTAMP, pausedElapsedTimeMillis).apply()  // 把目前暫停時間寫入 KEY_LAST_TIMESTAMP
         Log.d(TAG, "Auto-savedTimestamp: ${formatTime(pausedElapsedTimeMillis)}")
     }
     
     private fun setupSpeedSpinner() {
-        val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerSpeed.adapter = adapter
-        spinnerSpeed.setSelection(2)
+        val speedOptions = arrayOf("0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x") // 顯示在 Spinner 的文字選項
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, speedOptions) // 用簡單內建 layout
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)       // 下拉選單 layout
+        spinnerSpeed.adapter = adapter                    // 綁定 adapter 到 Spinner
+        spinnerSpeed.setSelection(2)                      // 預設選中 1.0x（index 2）
         spinnerSpeed.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val oldSpeed = playbackSpeed
-                playbackSpeed = when (position) {
-                    0 -> 0.5f; 1 -> 0.75f; 2 -> 1.0f; 3 -> 1.25f; 4 -> 1.5f; 5 -> 2.0f; else -> 1.0f
-                }
-                if (isPlaying) {
-                    val currentProgress = (System.nanoTime() - startTimeNanos) * oldSpeed / 1_000_000
-                    startTimeNanos = System.nanoTime() - (currentProgress * 1_000_000 / playbackSpeed).toLong()
+                val oldSpeed = playbackSpeed              // 記住舊的速度，方便後面換算時間
+                playbackSpeed = when (position){0 -> 0.5f; 1 -> 0.75f; 2 -> 1.0f; 3 -> 1.25f; 4 -> 1.5f; 5 -> 2.0f; else -> 1.0f}
+                if (isPlaying) {                          // 如果正在播放，切速度時要調整基準時間
+                    val currentProgress = (System.nanoTime() - startTimeNanos) * oldSpeed / 1_000_000// 先算出目前已經經過的「實際播放毫秒」（含舊速度）
+                    startTimeNanos = System.nanoTime() - (currentProgress * 1_000_000 / playbackSpeed).toLong()// 反推新的 startTimeNanos，讓畫面不要突然跳
                 }
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {} // 沒選到任何項目時不做事
         }
     }
 
@@ -582,75 +580,49 @@ class MainActivity : AppCompatActivity() {
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 subtitleCues = if (format == "vtt") parseVtt(inputStream) else parseSrt(inputStream)
                 if (subtitleCues.isNotEmpty()) {
-                    buttonPlayPause.isEnabled = true
-                    buttonReset.isEnabled = true
-                    buttonLaunchOverlay.isEnabled = true
-                    val duration = (subtitleCues.last().endTimeMs) + 7200000L
-                    sliderPlayback.valueTo = duration.toFloat()
-                    sliderPlayback.isEnabled = true
-                    textViewSubtitle.text = "[Ready to play]"
+                    buttonPlayPause.isEnabled = true       // 啟用播放按鈕
+                    buttonReset.isEnabled = true           // 啟用重置按鈕
+                    buttonLaunchOverlay.isEnabled = true   // 啟用 overlay 按鈕
+                    val duration = (subtitleCues.last().endTimeMs) + 7200000L // 影片長度 + 預留兩小時 buffer
+                    sliderPlayback.valueTo = duration.toFloat()               // slider 最大值設為此 duration
+                    sliderPlayback.isEnabled = true        // 允許使用者拖動 time slider
+                    textViewSubtitle.text = "[Ready to play]" // UI 顯示已準備好
                 }
             }
         } catch (e: Exception) {}
     }
 
     private fun parseVtt(inputStream: InputStream): List<SubtitleCue> {
-        val cues = mutableListOf<SubtitleCue>()
-        val reader = inputStream.bufferedReader()
+        val cues = mutableListOf<SubtitleCue>()            // 暫存所有 cue 的 list
+        val reader = inputStream.bufferedReader()          // 用 BufferedReader 逐行讀入
         try {
             var line = reader.readLine()
-            if (line?.startsWith("\uFEFF") == true) line = line.substring(1)
-            if (line == null || !line.contains("WEBVTT")) return emptyList()
-            while (reader.readLine().also { line = it } != null) {
-                if (line?.contains("-->") == true) {
+            if (line?.startsWith("\uFEFF") == true) line = line.substring(1)   // 去掉 UTF-8 BOM
+            if (line == null || !line.contains("WEBVTT")) return emptyList()   // 頭行不含 WEBVTT 就不是 VTT
+            while (reader.readLine().also { line = it } != null) {             // 一直往下讀到 EOF
+                if (line?.contains("-->") == true) {                           // 找到時間軸那行
                     val t = line!!.split("-->")
-                    val s = timeToMillis(t[0].trim())
-                    val e = timeToMillis(t[1].trim().split(" ")[0])
-                    val b = StringBuilder()
+                    val s = timeToMillis(t[0].trim())                          // 開始時間
+                    val e = timeToMillis(t[1].trim().split(" ")[0])            // 結束時間（有時結尾有註記，先切掉）
+                    val b = StringBuilder()                                    // 用來累積字幕文字
                     var cL = reader.readLine()
-                    while (cL != null && cL.isNotBlank()) {
-                        if (b.isNotEmpty()) b.append(" ")
+                    while (cL != null && cL.isNotBlank()) {                    // 直到遇到空行為止
+                        if (b.isNotEmpty()) b.append(" ")                      // 行與行之間加空白
                         b.append(cL); cL = reader.readLine()
                     }
-                    if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
+                    if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString())) // 有合法時間才加入
                 }
             }
-        } catch (e: Exception) {}
-        return cues.sortedBy { it.startTimeMs }
-    }
-
-    private fun parseSrt(inputStream: InputStream): List<SubtitleCue> {
-        val cues = mutableListOf<SubtitleCue>()
-        val reader = inputStream.bufferedReader()
-        try {
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                if (line?.trim()?.toIntOrNull() != null) {
-                    val timeL = reader.readLine()
-                    if (timeL?.contains("-->") == true) {
-                        val ts = timeL.split("-->")
-                        val s = timeToMillis(ts[0].trim().replace(',', '.'))
-                        val e = timeToMillis(ts[1].trim().split(" ")[0].replace(',', '.'))
-                        val b = StringBuilder()
-                        var tL = reader.readLine()
-                        while (tL != null && tL.isNotBlank()) {
-                            if (b.isNotEmpty()) b.append(" ")
-                            b.append(tL); tL = reader.readLine()
-                        }
-                        if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
-                    }
-                }
-            }
-        } catch (e: Exception) {}
-        return cues.sortedBy { it.startTimeMs }
+        } catch (e: Exception) {} // Parser 失敗目前被吞掉，之後可補 log
+        return cues.sortedBy { it.startTimeMs }            // 依 startTime 排序，方便之後用 findCueForTime
     }
 
     private fun timeToMillis(t: String): Long? {
         return try {
-            val p = t.split(":")
-            val last = p.last()
-            val dot = last.indexOf('.')
-            val s = if (dot != -1) last.substring(0, dot).toLong() else last.toLong()
+            val p = t.split(":")                           // 依冒號劃分（可能是 mm:ss 或 hh:mm:ss）
+            val last = p.last()                            // 最後一段含秒與毫秒
+            val dot = last.indexOf('.')                    // 找小數點位置
+            val s = if (dot != -1) last.substring(0, dot).toLong() else last.toLong() // 秒的整數部份
             val ms = if (dot != -1) last.substring(dot + 1).padEnd(3, '0').take(3).toLong() else 0L
             if (p.size == 3) (p[0].toLong() * 3600 + p[1].toLong() * 60 + s) * 1000 + ms
             else (p[0].toLong() * 60 + s) * 1000 + ms
@@ -683,15 +655,15 @@ class MainActivity : AppCompatActivity() {
     private fun togglePlayPause() { if (isPlaying) pausePlayback() else startPlayback() }
 
     private fun startPlayback() {
-        if (subtitleCues.isEmpty()) return
-        isPlaying = true; setPlayButtonState(true)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)
-        handler.post(updateRunnable)
-        autoSaveHandler.removeCallbacks(autoSaveRunnable)// 2.8: 啟動自動儲存
-        autoSaveHandler.postDelayed(autoSaveRunnable, AUTO_SAVE_INTERVAL_MS)
+        if (subtitleCues.isEmpty()) return                // 沒有任何字幕就不用播放
+        isPlaying = true; setPlayButtonState(true)        // 切狀態 + 改 UI 成「Pause」
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) // 播放時保持螢幕常亮
+        startTimeNanos = System.nanoTime() - (pausedElapsedTimeMillis * 1_000_000)// 將 startTimeNanos 往前推，讓「經過時間 = 現在 - startTimeNanos」對應到暫停時間之後
+        handler.post(updateRunnable)                      // 啟動 30ms 更新循環
+        autoSaveHandler.removeCallbacks(autoSaveRunnable) // 2.8: 啟動自動儲存前先清一次
+        autoSaveHandler.postDelayed(autoSaveRunnable, AUTO_SAVE_INTERVAL_MS) // 安排下一次自動儲存
         val intent = Intent(OverlayService.ACTION_PAUSE_PLAY).apply { putExtra("is_paused", false) }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent) // 通知 overlay：現在是播放中
     }
 
     private fun pausePlayback() {
@@ -768,19 +740,18 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("Range")
     private fun getFileName(uri: Uri): String? {
         return contentResolver.query(uri, null, null, null, null)?.use { c ->
-            if (c.moveToFirst()) c.getString(c.getColumnIndex(OpenableColumns.DISPLAY_NAME)) else null
+            if (c.moveToFirst()) c.getString(c.getColumnIndex(OpenableColumns.DISPLAY_NAME)) else null// 從 SAF 提供的 cursor 中讀 DISPLAY_NAME 欄，拿到檔名
         }
     }
-
     private fun openFilePicker() {
-        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)         // 只允許可開啟的文件
+            type = "*/*"                                  // 主類型先設為全部
             putExtra(
                 Intent.EXTRA_MIME_TYPES,
                 arrayOf("text/vtt", "application/x-subrip", "text/plain")
-            )
-        }
-        selectSubtitleFileLauncher.launch(i)
+            )                                             // 再用多 MIME 限縮到字幕類型
+        } selectSubtitleFileLauncher.launch(i)              // 使用 ActivityResultLauncher 開 SAF picker
     }
 
     private fun buildNextEpisodeBase(nameWithExt: String): String? { // 回傳「到 E 下一集為止的部分」，丟掉尾巴
@@ -798,29 +769,30 @@ class MainActivity : AppCompatActivity() {
         val baseNext = prefixBeforeE + eChar + incremented            // "Show.S01E04"
         return baseNext        // 不要尾巴：只保留到新的 E04 為止
     }
-    private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
+    private fun tryLoadNextEpisode() {    // 綁在 buttonTryNextEp 的 onClick
         Log.d(TAG, "tryLoadNextEpisode() called")
-        val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-        val cursor = contentResolver.query( currentUri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)// 不要尾巴：只保留到新的 E04 為止    
-        val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
-        } ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
+        val currentUri = lastSubtitleUri ?: return Toast
+            .makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()// 沒有記錄最後字幕 URI，就直接提示後返回
+        val cursor = contentResolver.query(currentUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null ) // 從 SAF 查出目前檔名（含副檔名）
+        val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
+            ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }// 沒查到檔名就直接結束
         Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
-        val baseNext = buildNextEpisodeBase(currentName)
-        if (baseNext == null) return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() 
-        Log.d(TAG, """Next-ep base = "$baseNext"""")  // 例如 "Show.S01E04"
-        val currentDoc = DocumentFile.fromSingleUri(this, currentUri)
+        val baseNext = buildNextEpisodeBase(currentName)  // 算出下一集的「基底」字串（到 E## 為止）
+        if (baseNext == null)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+        Log.d(TAG, """Next-ep base = "$baseNext"""")     // 例如 "Show.S01E04"
+        val currentDoc = DocumentFile.fromSingleUri(this, currentUri) // 用 DocumentFile 抓目前檔案所在目錄
         val parentDoc = currentDoc?.parentFile
-        if (parentDoc == null || !parentDoc.isDirectory) return Toast.makeText( this, "No close pattern file", Toast.LENGTH_SHORT).show()
-        val children = parentDoc.listFiles()
+        if (parentDoc == null || !parentDoc.isDirectory)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
+        val children = parentDoc.listFiles()              // 列出同資料夾所有檔案
         Log.d(TAG, "Children in folder: ${children.map { it.name }}")
-        val targetDoc = children.firstOrNull { child ->         // 只要求「以 baseNext 開頭」，尾巴一律無視
+        val targetDoc = children.firstOrNull { child ->   // 尋找「檔名以 baseNext 開頭」的檔案
             val name = child.name ?: return@firstOrNull false
-            name.startsWith(baseNext)
+            name.startsWith(baseNext)                     // 尾巴、版本號、解析度全部忽略
         }
         if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
-            lastSubtitleUri = targetDoc.uri
-            handleSubtitleFileSelected(targetDoc.uri)
-        } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
+            lastSubtitleUri = targetDoc.uri               // 更新 lastSubtitleUri
+            handleSubtitleFileSelected(targetDoc.uri)     // 當作選擇新字幕檔重新載入
+        } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()}
     }
 
     
