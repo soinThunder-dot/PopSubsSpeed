@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_LAST_TIMESTAMP = "last_timestamp_ms"  /**         * 【2.8 新增】自動儲存間隔         * 值：180,000 毫秒 = 3 分鐘
         *          * 觸發時機：         * - 播放期間，每 3 分鐘自動儲存一次當前進度         * - startPlayback() 時啟動定時器         * - pausePlayback() 時停止定時器（並立即儲存一次）         */
         private const val AUTO_SAVE_INTERVAL_MS = 180_000L
+        private const val REQUEST_OPEN_FOLDER = 2001  //*!*使用者選字幕時，同步觸發選資料夾
         private const val GOOGLE_BASE = "https://www.google.com/search?udm=14&q="// Google 搜尋 base URL（固定帶 udm=14）+站台 group
         private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org OR site:addic7ed.com)"
     }
@@ -171,6 +172,7 @@ class MainActivity : AppCompatActivity() {
     }         }
     //「Try next ep」按鈕：用 SAF 在同目錄找新檔,原本用 ACTION_OPEN_DOCUMENT 選了一個檔案並且 takePersistableUriPermission，現在可以把這個 uri 存起來，例如在 MainActivity 裡有個變數：
     private var lastSubtitleUri: Uri? = null
+    private var lastFolderUri: Uri? = null  //*!*使用者選字幕時，同步觸發選資料夾
     // 【核心函數 1】字幕檔案處理
     /**     * 【處理字幕檔案選擇】     *      * 當使用者從檔案選擇器選擇字幕檔後，此函數統一處理所有相關邏輯
      * 【執行流程】     *      * 步驟 1：記錄 URI     *   - 儲存到 selectedFileUri     *   - 持久化到 SharedPreferences (KEY_LAST_SUBTITLE_URI)     *   → 用途：下次啟動可透過 Reload Last File 快速載入
@@ -220,6 +222,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Persistable URI permission granted: $uri")
                 } catch (e: SecurityException) {   Log.w(TAG, "Failed to take persistable URI permission", e)  }         // 權限無法持久化（例如暫存檔案）     // 忽略錯誤，繼續載入
                 handleSubtitleFileSelected(uri)                // 處理選擇的檔案
+                if (lastFolderUri == null) openFolderPicker()  //*!*
             }
         } else {   Log.d(TAG, "File selection cancelled")    }          // 使用者取消選擇
     }
@@ -591,8 +594,17 @@ class MainActivity : AppCompatActivity() {
             putExtra(     Intent.EXTRA_MIME_TYPES,    arrayOf("text/vtt", "application/x-subrip", "text/plain")    )
         }                                           // 再用多 MIME 限縮到字幕類型
         selectSubtitleFileLauncher.launch(i)              // 使用 ActivityResultLauncher 開 SAF picker
+    }//v使用者選字幕時，同步觸發選資料夾---->
+    private fun openFolderPicker() { val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE) ; startActivityForResult(intent, REQUEST_OPEN_FOLDER)}
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) { super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_OPEN_FOLDER && resultCode == Activity.RESULT_OK) {
+            val folderUri = data?.data ?: return
+            contentResolver.takePersistableUriPermission( folderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION )
+            lastFolderUri = folderUri  //*!*
+            Toast.makeText(this, "資料夾已設定", Toast.LENGTH_SHORT).show()
+        }
     }
-
     private fun buildNextEpisodeBase(nameWithExt: String): String? { // 回傳「到 E 下一集為止的部分」，丟掉尾巴
         val dotIndex = nameWithExt.lastIndexOf('.')    // Show.S01E03 v2.srt → baseNext = "Show.S01E04"
         val namePart = if (dotIndex != -1) nameWithExt.substring(0, dotIndex) else nameWithExt
@@ -627,10 +639,9 @@ class MainActivity : AppCompatActivity() {
         val baseNext = buildNextEpisodeBase(currentName)  // 算出下一集的「基底」字串（到 E## 為止）
         if (baseNext == null)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  ;  Log.d(TAG, """Next-ep base = "$baseNext" """)     //例如 "Show.S01E04"
         Toast.makeText(this, "try grab: $baseNext", Toast.LENGTH_LONG).show()//try grab: ...（buildNextEpisodeBase() 產生的字串）
-        val currentDoc = DocumentFile.fromSingleUri(this, currentUri) // 用 DocumentFile 抓目前檔案所在目錄
-        val parentDoc = currentDoc?.parentFile
-        if (parentDoc == null || !parentDoc.isDirectory)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-        val children = parentDoc.listFiles()              // 列出同資料夾所有檔案
+        val folderUri = lastFolderUri ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  }
+        val folderDoc = DocumentFile.fromTreeUri(this, folderUri) ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  }
+        val children = folderDoc.listFiles()  //*!*
         Log.d(TAG, "Children in folder: ${children.map { it.name }}")
         children.forEach { child -> Toast.makeText(this, "child: ${child.name}", Toast.LENGTH_SHORT).show() }//看畫面上跑出來的 child: ... 幾個檔名
         val targetDoc = children.firstOrNull { child ->   // 尋找「檔名以 baseNext 開頭」的檔案
