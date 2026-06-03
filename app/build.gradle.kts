@@ -8,11 +8,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-                applicationId = "com.example.simplevttplayer.easyview_7"
+                applicationId = "com.example.simplevttplayer.easyview_8"
         minSdk = 21
         targetSdk = 35
-        versionCode = 7
-        versionName = "7"
+        versionCode = 8
+        versionName = "8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
