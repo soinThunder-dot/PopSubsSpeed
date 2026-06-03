@@ -598,7 +598,7 @@ class MainActivity : AppCompatActivity() {
         val namePart = if (dotIndex != -1) nameWithExt.substring(0, dotIndex) else nameWithExt
         val regex  = Regex("[Ee](\\d+)")        // 找 E## / e##，例如 E3, E03, e12, e009
         val regexR = Regex("(\\d+)[Xx](\\d+)") // 例如 09x05, 9X5
-        val eMatch = regex.find(namePart)
+        val eMatch = regex.find(namePart)    // 先處理 E## / e##
         if (eMatch != null) {
             val numberStr = eMatch.groupValues[1]
             val number = numberStr.toLongOrNull() ?: return null
@@ -613,7 +613,8 @@ class MainActivity : AppCompatActivity() {
         val epNum = epStr.toLongOrNull() ?: return null
         val nextEp = (epNum + 1).toString().padStart(epStr.length, '0')
         val prefixBefore = namePart.substring(0, xMatch.range.first) // "Show.09x05" 前面的東西
-        return prefixBefore + seasonStr + "x" + nextEp            // "Show.09x06"（保留原有位數）[web:75][web:76]
+        val xChar = namePart[xMatch.range.first + seasonStr.length]  // 原始的 'x' 或 'X'
+        return prefixBefore + seasonStr + xChar + nextEp             // "Show.09x06"（保留原有位數）[web:75][web:76]
     }
     private fun tryLoadNextEpisode() {    // 綁在 buttonTryNextEp 的 onClick
         Log.d(TAG, "tryLoadNextEpisode() called")
@@ -625,6 +626,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
         val baseNext = buildNextEpisodeBase(currentName)  // 算出下一集的「基底」字串（到 E## 為止）
         if (baseNext == null)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  ;  Log.d(TAG, """Next-ep base = "$baseNext" """)     //例如 "Show.S01E04"
+        Toast.makeText(this, "try grab: $baseNext", Toast.LENGTH_LONG).show()//try grab: ...（buildNextEpisodeBase() 產生的字串）
         val currentDoc = DocumentFile.fromSingleUri(this, currentUri) // 用 DocumentFile 抓目前檔案所在目錄
         val parentDoc = currentDoc?.parentFile
         if (parentDoc == null || !parentDoc.isDirectory)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
