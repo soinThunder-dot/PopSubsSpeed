@@ -783,46 +783,42 @@ class MainActivity : AppCompatActivity() {
         selectSubtitleFileLauncher.launch(i)
     }
 
-    private fun incrementLastDigitInName(fileName: String): String {
-        val dotIndex = fileName.lastIndexOf('.')    // 先拆掉副檔名
-        val namePart = if (dotIndex != -1) fileName.substring(0, dotIndex) else fileName
-        val extPart = if (dotIndex != -1) fileName.substring(dotIndex) else ""
-        val regex = Regex("(\\d+)(?!.*\\d)")    // 從右邊找連續的數字
-        val match = regex.find(namePart)
-        if (match != null) {
-            val numberStr = match.value
-            val start = match.range.first
-            val end = match.range.last
-            val number = numberStr.toLongOrNull() ?: return fileName
-            val incremented = (number + 1).toString().padStart(numberStr.length, '0')
-            val newNamePart =  namePart.substring(0, start) + incremented + namePart.substring(end + 1)
-            return newNamePart + extPart 
-            Log.d(TAG, "incrementLastDigitInName: input=$fileName, output=$newNamePart$extPart")
-        } else { return fileName }        // 沒有數字就不動
+    private fun buildNextEpisodeBase(nameWithExt: String): String? { // 回傳「到 E 下一集為止的部分」，丟掉尾巴
+        val dotIndex = nameWithExt.lastIndexOf('.')    // Show.S01E03 v2.srt → baseNext = "Show.S01E04"
+        val namePart = if (dotIndex != -1) nameWithExt.substring(0, dotIndex) else nameWithExt
+        val regex = Regex("[Ee](\\d+)")        // 找 E## / e##，例如 E3, E03, e12, e009
+        val match = regex.find(namePart) ?: return null
+        val numberStr = match.groupValues[1]     // "03"
+        val number = numberStr.toLongOrNull() ?: return null
+        val incremented = (number + 1)
+            .toString()
+            .padStart(numberStr.length, '0')         // "03" → "04"
+        val eChar = namePart[match.range.first]      // 'E' 或 'e'
+        val prefixBeforeE = namePart.substring(0, match.range.first)  // "Show.S01"
+        val baseNext = prefixBeforeE + eChar + incremented            // "Show.S01E04"
+        return baseNext        // 不要尾巴：只保留到新的 E04 為止
     }
     private fun tryLoadNextEpisode() {    // 假設你已經在 onCreate 裡用 findViewById<Button>(R.id.buttonTryNextEp)
         Log.d(TAG, "tryLoadNextEpisode() called")
         val currentUri = lastSubtitleUri ?: return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-        // 先用 ContentResolver 查出目前檔名
-        val cursor = contentResolver.query( currentUri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)      
+        val cursor = contentResolver.query( currentUri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)// 不要尾巴：只保留到新的 E04 為止    
         val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null
-        } ?: run {
-            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-            return }
+        } ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
         Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
-        val targetName = incrementLastDigitInName(currentName) 
-        Log.d(TAG, """Closest file is "$targetName" , Cant find""")   // 就你要的這一句，直接用 targetName
-        val currentDoc = DocumentFile.fromSingleUri(this, currentUri)        // 用 DocumentFile 取得父目錄，再在裡面找同名檔案
+        val baseNext = buildNextEpisodeBase(currentName)
+        if (baseNext == null) return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() 
+        Log.d(TAG, """Next-ep base = "$baseNext"""")  // 例如 "Show.S01E04"
+        val currentDoc = DocumentFile.fromSingleUri(this, currentUri)
         val parentDoc = currentDoc?.parentFile
-        if (parentDoc == null || !parentDoc.isDirectory) {
-            Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (parentDoc == null || !parentDoc.isDirectory) return Toast.makeText( this, "No close pattern file", Toast.LENGTH_SHORT).show()
         val children = parentDoc.listFiles()
-        val targetDoc = children.firstOrNull { it.name == targetName }
-        Log.d(TAG, "Children in folder: ${children.map { it.name }}")   // ★ 新增：檢查有哪些檔名
+        Log.d(TAG, "Children in folder: ${children.map { it.name }}")
+        val targetDoc = children.firstOrNull { child ->         // 只要求「以 baseNext 開頭」，尾巴一律無視
+            val name = child.name ?: return@firstOrNull false
+            name.startsWith(baseNext)
+        }
         if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
-            lastSubtitleUri = targetDoc.uri            // 找到下一集，直接當成新的字幕檔載入
+            lastSubtitleUri = targetDoc.uri
             handleSubtitleFileSelected(targetDoc.uri)
         } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }
     }
