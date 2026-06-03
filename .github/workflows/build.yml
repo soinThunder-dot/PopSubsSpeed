@@ -1,13 +1,12 @@
 name: Build APK
-
 on:
   push:
     paths:
-      - 'app/build.gradle.kts'   # 只有這個檔被改動才觸發
+      - 'app/build.gradle.kts'        # 只要這個檔有變更就觸發
   pull_request:
     paths:
-      - '.github/workflows/build.yml'   # 開 PR 且有改這個檔，也會觸發
-  workflow_dispatch:                    # 手動依然可以跑
+      - 'app/build.gradle.kts'        # PR 裡改這個檔也觸發
+  workflow_dispatch:                  # 仍然保留手動觸發
 
 jobs:
   build:
