@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         *          * 觸發時機：         * - 播放期間，每 3 分鐘自動儲存一次當前進度         * - startPlayback() 時啟動定時器         * - pausePlayback() 時停止定時器（並立即儲存一次）         */
         private const val AUTO_SAVE_INTERVAL_MS = 180_000L
         private const val GOOGLE_BASE = "https://www.google.com/search?udm=14&q="// Google 搜尋 base URL（固定帶 udm=14）+站台 group
-        private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org)"
+        private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org OR site:addic7ed.com)"
     }
     private lateinit var editTextQuery: EditText
     // 【ActivityResultLauncher】檔案選擇器 & 權限請求啟動器
