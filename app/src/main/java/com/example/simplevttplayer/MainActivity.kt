@@ -394,7 +394,8 @@ class MainActivity : AppCompatActivity() {
         buttonReloadLast = findViewById(R.id.buttonReloadLastFile)
         buttonPlayPause = findViewById(R.id.buttonPlayPause)
         buttonReset = findViewById(R.id.buttonReset)
-        buttonLaunchOverlay = findViewById(R.id.buttonLaunchOverlay)        
+        buttonLaunchOverlay = findViewById(R.id.buttonLaunchOverlay)
+        buttonTryNextEp = findViewById(R.id.buttonTryNextEp)   // 這行是你要新增的
         // 文字顯示
         textViewFilePath = findViewById(R.id.textViewFilePath)
         textViewCurrentTime = findViewById(R.id.textViewCurrentTime)
