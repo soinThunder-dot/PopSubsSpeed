@@ -114,6 +114,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             setupTimeEditor(editSec)                                       // 對秒數欄位掛 Enter/DONE 行為
 
             buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp) // 綁定「Next Ep」按鈕
+            buttonOverlayNextEp.visibility = View.GONE   // 初始時就隱藏 NEXT 按鈕
             buttonOverlayNextEp.setOnClickListener {
                 val intent = Intent(ACTION_NEXT_EP)                        // 建立 NEXT_EP 廣播
                 LocalBroadcastManager.getInstance(this).sendBroadcast(intent) // 丟給 MainActivity 處理下一集
