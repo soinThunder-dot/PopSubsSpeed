@@ -116,18 +116,8 @@ class OverlayService : Service() {
                 editSec.requestFocus()
                 imm.showSoftInput(editSec, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
             }
-            
-            editSec.addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                override fun afterTextChanged(s: android.text.Editable?) {
-                    val minVal = editMin.text.toString().toIntOrNull() ?: 0
-                    val secVal = s?.toString()?.toIntOrNull() ?: 0
-                    Toast.makeText(this@OverlayService, "Overlay set to %02d:%02d".format(minVal, secVal), Toast.LENGTH_SHORT).show()
-                    if (secVal in 0..59) {sendTimeToMainFromOverlay(minVal, secVal)
-                    } else {s?.clear() }// 超出 0–59：你可以清空或 clamp
-                    disableOverlayInput() } // 一次輸入完就關輸入模式
-            })
+            setupTimeEditor( editMin )
+            setupTimeEditor( editSec )
             
             buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp)
             buttonOverlayNextEp.setOnClickListener {
@@ -275,11 +265,34 @@ class OverlayService : Service() {
     }
 
     private fun enableOverlayInput() {
+        if (!::params.isInitialized || !::overlayView.isInitialized || !overlayView.isAttachedToWindow) return
         params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         windowManager.updateViewLayout(overlayView, params)
     }
     private fun disableOverlayInput() {
+        if (!::params.isInitialized || !::overlayView.isInitialized || !overlayView.isAttachedToWindow) return
         params.flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN  or  WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         windowManager.updateViewLayout(overlayView, params)
     }
+    private fun setupTimeEditor(edit: EditText) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        edit.setOnEditorActionListener { v, actionId, event ->
+            val isImeDone = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+            val isEnterKey = event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_UP
+            if (isImeDone || isEnterKey) {
+                val minVal = editMin.text.toString().toIntOrNull() ?: 0
+                val secVal = editSec.text.toString().toIntOrNull() ?: 0
+                if (secVal in 0..59) {
+                    Toast.makeText( this,"Overlay set to %02d:%02d".format(minVal, secVal), Toast.LENGTH_SHORT ).show()
+                    sendTimeToMainFromOverlay(minVal, secVal)
+                } else { editSec.text?.clear()  }
+                imm.hideSoftInputFromWindow(edit.windowToken, 0)    // 收鍵盤 + 關輸入模式
+                edit.clearFocus()
+                disableOverlayInput()
+                true
+            } else {  false   }
+        }
+    }
+
+    
 }
