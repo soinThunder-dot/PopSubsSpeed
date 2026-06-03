@@ -615,6 +615,31 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {} // Parser 失敗目前被吞掉，之後可補 log
         return cues.sortedBy { it.startTimeMs }            // 依 startTime 排序，方便之後用 findCueForTime
+    }  
+    private fun parseSrt(inputStream: InputStream): List<SubtitleCue> {
+        val cues = mutableListOf<SubtitleCue>()
+        val reader = inputStream.bufferedReader()
+        try {
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                if (line?.trim()?.toIntOrNull() != null) {
+                    val timeL = reader.readLine()
+                    if (timeL?.contains("-->") == true) {
+                        val ts = timeL.split("-->")
+                        val s = timeToMillis(ts[0].trim().replace(',', '.'))
+                        val e = timeToMillis(ts[1].trim().split(" ")[0].replace(',', '.'))
+                        val b = StringBuilder()
+                        var tL = reader.readLine()
+                        while (tL != null && tL.isNotBlank()) {
+                            if (b.isNotEmpty()) b.append(" ")
+                            b.append(tL); tL = reader.readLine()
+                        }
+                        if (s != null && e != null) cues.add(SubtitleCue(s, e, b.toString()))
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+        return cues.sortedBy { it.startTimeMs }
     }
 
     private fun timeToMillis(t: String): Long? {
@@ -750,8 +775,8 @@ class MainActivity : AppCompatActivity() {
             putExtra(
                 Intent.EXTRA_MIME_TYPES,
                 arrayOf("text/vtt", "application/x-subrip", "text/plain")
-            )                                             // 再用多 MIME 限縮到字幕類型
-        } selectSubtitleFileLauncher.launch(i)              // 使用 ActivityResultLauncher 開 SAF picker
+            )  }                                           // 再用多 MIME 限縮到字幕類型
+        selectSubtitleFileLauncher.launch(i)              // 使用 ActivityResultLauncher 開 SAF picker
     }
 
     private fun buildNextEpisodeBase(nameWithExt: String): String? { // 回傳「到 E 下一集為止的部分」，丟掉尾巴
