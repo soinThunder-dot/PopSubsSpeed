@@ -598,7 +598,7 @@ class MainActivity : AppCompatActivity() {
         val namePart = if (dotIndex != -1) nameWithExt.substring(0, dotIndex) else nameWithExt
         val regex  = Regex("[Ee](\\d+)")        // 找 E## / e##，例如 E3, E03, e12, e009
         val regexR = Regex("(\\d+)[Xx](\\d+)") // 例如 09x05, 9X5
-        val eMatch = eRegex.find(namePart)
+        val eMatch = regex.find(namePart)
         if (eMatch != null) {
             val numberStr = eMatch.groupValues[1]
             val number = numberStr.toLongOrNull() ?: return null
