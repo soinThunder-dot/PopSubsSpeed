@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-                applicationId = "com.example.simplevttplayer.easyview9"
+                applicationId = "com.example.simplevttplayer.easyview__9"
         minSdk = 21
         targetSdk = 35
         versionCode = 9
