@@ -30,10 +30,6 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.simplevttplayer.JpGrammarHighlighter
-import android.widget.Spinner
-import android.widget.ArrayAdapter
-import android.widget.AdapterView
-import android.widget.SeekBar
 import android.widget.EditText
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -67,9 +63,6 @@ class OverlayService : Service() {
     private lateinit var editMin: EditText
     private lateinit var editSec: EditText
     private lateinit var buttonOverlayNextEp: View
-    
-    private var currentSubtitle = ""
-    private var currentFontSize = 20
     
     private val subtitleUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -141,7 +134,7 @@ class OverlayService : Service() {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,  // 或你之前用的 TYPE_PHONE
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN    or// 先移除 FLAG_NOT_FOCUSABLE
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,  // 讓軟鍵盤可以針對這個 window 顯示
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,// 預設不可獲得焦點（不會彈鍵盤），點 EditText 前透過 enableOverlayInput() 去掉 NOT_FOCUSABLE
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
@@ -219,7 +212,7 @@ class OverlayService : Service() {
             if (::buttonOverlayNextEp.isInitialized) { buttonOverlayNextEp.visibility = vis }
             Log.d(TAG, "Control panel visibility: ${if (isPaused) "VISIBLE" else "GONE"}")
         }
-        Toast.makeText(this, if (isPaused) "Paused" else "Resumed", Toast.LENGTH_SHORT).show()
+        //Toast.makeText(this, if (isPaused) "Paused" else "Resumed", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "Pause toggled from overlay: isPaused=$isPaused")
     }
     
@@ -257,11 +250,6 @@ class OverlayService : Service() {
             textViewOverlaySubtitle.textSize = fontSize.toFloat()
             Log.d(TAG, "Overlay font size updated to: $fontSize")
         }
-    }
-    
-    private fun formatTime(ms: Long): String {
-        val s = ms / 1000
-        return String.format("%02d:%02d.%03d", s / 60, s % 60, ms % 1000)
     }
 
     private fun enableOverlayInput() {
