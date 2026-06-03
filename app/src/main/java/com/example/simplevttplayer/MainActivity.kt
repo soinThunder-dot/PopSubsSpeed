@@ -596,17 +596,24 @@ class MainActivity : AppCompatActivity() {
     private fun buildNextEpisodeBase(nameWithExt: String): String? { // 回傳「到 E 下一集為止的部分」，丟掉尾巴
         val dotIndex = nameWithExt.lastIndexOf('.')    // Show.S01E03 v2.srt → baseNext = "Show.S01E04"
         val namePart = if (dotIndex != -1) nameWithExt.substring(0, dotIndex) else nameWithExt
-        val regex = Regex("[Ee](\\d+)")        // 找 E## / e##，例如 E3, E03, e12, e009
-        val match = regex.find(namePart) ?: return null
-        val numberStr = match.groupValues[1]     // "03"
-        val number = numberStr.toLongOrNull() ?: return null
-        val incremented = (number + 1)
-            .toString()
-            .padStart(numberStr.length, '0')         // "03" → "04"
-        val eChar = namePart[match.range.first]      // 'E' 或 'e'
-        val prefixBeforeE = namePart.substring(0, match.range.first)  // "Show.S01"
-        val baseNext = prefixBeforeE + eChar + incremented            // "Show.S01E04"
-        return baseNext        // 不要尾巴：只保留到新的 E04 為止
+        val regex  = Regex("[Ee](\\d+)")        // 找 E## / e##，例如 E3, E03, e12, e009
+        val regexR = Regex("(\\d+)[Xx](\\d+)") // 例如 09x05, 9X5
+        val eMatch = eRegex.find(namePart)
+        if (eMatch != null) {
+            val numberStr = eMatch.groupValues[1]
+            val number = numberStr.toLongOrNull() ?: return null
+            val incremented = (number + 1).toString().padStart(numberStr.length, '0')
+            val eChar = namePart[eMatch.range.first]
+            val prefixBeforeE = namePart.substring(0, eMatch.range.first)
+            return prefixBeforeE + eChar + incremented           // 保持原本 E03 → E04 的邏輯
+        }        // 再試 09x05 這種
+        val xMatch = regexR.find(namePart) ?: return null
+        val seasonStr = xMatch.groupValues[1]                     // "09"
+        val epStr = xMatch.groupValues[2]                         // "05"
+        val epNum = epStr.toLongOrNull() ?: return null
+        val nextEp = (epNum + 1).toString().padStart(epStr.length, '0')
+        val prefixBefore = namePart.substring(0, xMatch.range.first) // "Show.09x05" 前面的東西
+        return prefixBefore + seasonStr + "x" + nextEp            // "Show.09x06"（保留原有位數）[web:75][web:76]
     }
     private fun tryLoadNextEpisode() {    // 綁在 buttonTryNextEp 的 onClick
         Log.d(TAG, "tryLoadNextEpisode() called")
@@ -617,8 +624,7 @@ class MainActivity : AppCompatActivity() {
             ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }// 沒查到檔名就直接結束
         Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
         val baseNext = buildNextEpisodeBase(currentName)  // 算出下一集的「基底」字串（到 E## 為止）
-        if (baseNext == null)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
-        Log.d(TAG, """Next-ep base = "$baseNext"""")     // 例如 "Show.S01E04"
+        if (baseNext == null)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  ;  Log.d(TAG, """Next-ep base = "$baseNext" """)     //例如 "Show.S01E04"
         val currentDoc = DocumentFile.fromSingleUri(this, currentUri) // 用 DocumentFile 抓目前檔案所在目錄
         val parentDoc = currentDoc?.parentFile
         if (parentDoc == null || !parentDoc.isDirectory)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()
