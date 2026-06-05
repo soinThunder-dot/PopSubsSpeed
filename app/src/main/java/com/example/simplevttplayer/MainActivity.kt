@@ -97,12 +97,6 @@ class MainActivity : AppCompatActivity() {
                     // 為什麼乘以 1,000,000？因為 nanoTime 是奈秒，seekToMs 是毫秒
                     startTimeNanos = System.nanoTime() - (seekToMs * 1_000_000)
                     sliderPlayback.value = seekToMs.toFloat()          //1. 同步 Slider 位置
-                    textViewYellowTime.text = formatTime(seekToMs)    // 2. 更新 slider 與畫面上的時間文字
-                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())
-                    val cue = findCueForTime((seekToMs * playbackSpeed).toLong())
-                    val newText = cue?.text ?: ""// 3. 找出此時間點對應的字幕，更新主畫面 + 通知 Overlay
-                    textViewSubtitle.text = newText
-                    sendSubtitleUpdate(newText)
                 }
                 OverlayService.ACTION_NEXT_EP -> {   tryLoadNextEpisode()   }
             }
