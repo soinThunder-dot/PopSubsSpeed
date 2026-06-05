@@ -178,7 +178,7 @@ class MainActivity : AppCompatActivity() {
      * 【錯誤處理】     * 情況 1：getFileName() 返回 null     *   → Toast: "File name error"     *   → 呼叫 resetPlaybackStateOnError()
      * 情況 2：副檔名不是 .vtt 或 .srt     *   → Toast: "Not VTT/SRT"     *   → 呼叫 resetPlaybackStateOnError()
      * 【呼叫來源】     * 1. selectSubtitleFileLauncher 的 callback（檔案選擇器返回）     * 2. buttonReloadLast 點擊事件（Reload Last File）
-     * 【注意事項】     * - 函數內呼叫了兩次 resetPlayback()，第二次可能是冗餘     * - 不檢查 URI 有效性（假設 SAF 返回的 URI 必定有效）     * - 不驗證檔案大小（超大檔案可能導致 OOM）     */
+     * 【注意事.       * - 不檢查 URI 有效性（假設 SAF 返回的 URI 必定有效）     * - 不驗證檔案大小（超大檔案可能導致 OOM）     */
     private fun handleSubtitleFileSelected(uri: Uri) {
         selectedFileUri = uri        // 步驟 1：記錄並持久化 URI
         lastSubtitleUri = uri        //2. 「Try next ep」按鈕：用 SAF 在同目錄找新檔
@@ -186,7 +186,6 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putString(KEY_LAST_SUBTITLE_URI, uri.toString()).apply()
         Log.d(TAG, "Subtitle file selected: $uri")
         subtitleCues = emptyList()  // 清空舊字幕列表
-        resetPlayback()             // 第一次重設
         val fileName = getFileName(uri)        // 步驟 4：取得檔案名稱
         resetPlayback()  // 第二次重設（可能是確保完全清除狀態）
         if (fileName != null) {
