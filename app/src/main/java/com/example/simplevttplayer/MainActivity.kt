@@ -443,7 +443,7 @@ class MainActivity : AppCompatActivity() {
     }  
     private fun parseSrt(inputStream: InputStream): List<SubtitleCue> {
         val cues = mutableListOf<SubtitleCue>()
-        val reader = inputStream.bufferedReader()
+        val reader = inputStream.bufferedReader(Charsets.UTF_8)   // ← 加 charset
         try {
             var line: String?
             while (reader.readLine().also { line = it } != null) {
