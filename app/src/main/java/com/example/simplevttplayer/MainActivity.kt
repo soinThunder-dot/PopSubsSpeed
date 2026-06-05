@@ -419,7 +419,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun parseVtt(inputStream: InputStream): List<SubtitleCue> {
         val cues = mutableListOf<SubtitleCue>()            // 暫存所有 cue 的 list
-        val reader = inputStream.bufferedReader()          // 用 BufferedReader 逐行讀入
+        val reader = inputStream.bufferedReader(Charsets.UTF_8)   // ← 加 charset // 用 BufferedReader 逐行讀入
         try {
             var line = reader.readLine()
             if (line?.startsWith("\uFEFF") == true) line = line.substring(1)   // 去掉 UTF-8 BOM
