@@ -298,8 +298,6 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Restoring timestamp: ${formatTime(savedTimestamp)}")
                 pausedElapsedTimeMillis = savedTimestamp                // 設定播放位置
                 sliderPlayback.value = savedTimestamp.toFloat()
-                textViewYellowTime.text = formatTime(savedTimestamp)    // 更新時間顯示
-                textViewCurrentTime.text = formatTime((savedTimestamp * playbackSpeed).toLong())
                 Toast.makeText(   this,   "已恢復至 ${formatTime(savedTimestamp)}",   Toast.LENGTH_SHORT   ).show() // 提示使用者
             }
         }        /**         * 【播放/暫停按鈕】         * 切換播放狀態         */
