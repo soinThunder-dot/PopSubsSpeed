@@ -100,6 +100,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             controlPanel = overlayView.findViewById(R.id.controlPanel)     // 2.8: Get control panel views
             editMin = overlayView.findViewById(R.id.editMin)               // 綁定分鐘輸入欄位
             editSec = overlayView.findViewById(R.id.editSec)               // 綁定秒數輸入欄位
+            buttonClose = overlayVieq.findViewById(R.id.buttonClose) //overlay關制
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager // 控制鍵盤
             editMin.setOnClickListener {
                 enableOverlayInput()                                       // 移除 NOT_FOCUSABLE，允許輸入
