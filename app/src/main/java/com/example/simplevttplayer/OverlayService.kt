@@ -50,6 +50,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
         const val ACTION_OVERLAY_SEEK = "com.example.simplevttplayer.OVERLAY_SEEK"      // Overlay→Main：跳時間
         const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME"        // 預留：時間戳更新，目前沒用
         const val ACTION_NEXT_EP = "com.example.simplevttplayer.NEXT_EP"                // Overlay→Main：下一集
+        const val ACTION_OVERLAY_CLOSE = "com.example.simplevttplayer.ACTION_OVERLAY_CLOSE"//加 close 按鈕 
         val TAG: String = OverlayService::class.java.simpleName                         // Logcat tag
     }
     private lateinit var windowManager: WindowManager           // 系統 Window 管理器，用來控制浮窗
@@ -127,6 +128,10 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             buttonMoveUp?.setOnClickListener {
                 Log.d(TAG, "Move up button clicked!")
                 moveOverlayUpByButtonClick()                               // 浮窗往上移一段距離
+            }
+            buttonClose.setOnClickListener {
+                val intent = Intent(ACTION_OVERLAY_CLOSE)
+                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
             }
             
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager // 取得 WindowManager
