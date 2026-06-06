@@ -54,5 +54,5 @@ dependencies {
 
     implementation("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
 
-    implementation "androidx.work:work-runtime-ktx:2.9.0" 
+    implementation ("androidx.work:work-runtime-ktx:2.9.0" )
 }
