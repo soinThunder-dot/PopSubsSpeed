@@ -259,7 +259,14 @@ class MainActivity : AppCompatActivity() {
             ActivityResultContracts.StartActivityForResult() // 權限請求返回後，檢查是否已授予
         ) {  if (checkOverlayPermission()) {  Log.d(TAG, "Overlay permission granted, starting service")  ;  startOverlayService()
             } else {   Log.w(TAG, "Overlay permission denied")  ;  Toast.makeText(this, "需要懸浮視窗權限", Toast.LENGTH_SHORT).show()    }
-        }        // ===============================================================================
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {        // ── 新增：請求豁免電池優化 ──────────────────────
+            val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                val intent = Intent( android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:$packageName") )
+                startActivity(intent)
+            }
+        }// ===============================================================================
         // 【階段 2】View 綁定        // Kuromoji 切換指示器
         textViewJpToggle = findViewById(R.id.textViewJpToggle)        
         // 按鈕群組
