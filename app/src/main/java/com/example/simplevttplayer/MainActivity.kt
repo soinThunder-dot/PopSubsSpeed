@@ -574,6 +574,11 @@ class MainActivity : AppCompatActivity() {
             if (isOverlayUIShown && checkOverlayPermission()) {     startOverlayService()    ;    sendSubtitleUpdate(textViewSubtitle.text.toString())    }
         }// 如果 overlay UI flag 是開的，就重啟 Service// 重新推一次當前字幕給 overlay
     }
+    private val overlayCloseReceiver = object : BroadcastReceiver() {//overlay close 加 receiver 接廣播，呼叫 resetPlayback()
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == OverlayService.ACTION_OVERLAY_CLOSE) {  resetPlayback()  }
+        }
+    }
     
     private fun findCueForTime(time: Long): SubtitleCue? = subtitleCues.find { time >= it.startTimeMs && time < it.endTimeMs }
 
