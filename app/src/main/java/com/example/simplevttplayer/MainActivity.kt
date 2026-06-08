@@ -353,6 +353,7 @@ class MainActivity : AppCompatActivity() {
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
         val deathFilter = IntentFilter("OVERLAY_SERVICE_DIED")         ;    LocalBroadcastManager.getInstance(this).registerReceiver(overlayDeathReceiver, deathFilter)
         val nextEpFilter = IntentFilter(OverlayService.ACTION_NEXT_EP) ;    LocalBroadcastManager.getInstance(this).registerReceiver(overlayNextEpReceiver, nextEpFilter)
+        val closeFilter = IntentFilter(OverlayService.ACTION_OVERLAY_CLOSE) ;LocalBroadcastManager.getInstance(this).registerReceiver(overlayCloseReceiver, closeFilter)
     }
     
     private fun buildGoogleSearchUrl(query: String): String { // 把「使用者輸入 + site group」組成 Google 搜尋網址
