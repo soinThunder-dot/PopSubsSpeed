@@ -81,6 +81,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    private val overlayNextEpReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {    if (intent?.action == OverlayService.ACTION_NEXT_EP) { tryLoadNextEpisode() }    }
+    }
     /**     * 【2.8 新增】Overlay 控制面板接收器     *      * 監聽事件：     * ===== ACTION_OVERLAY_SEEK =====     * Intent Extra：     * - "seek_to_ms" (Long) - 目標時間（毫秒）     * 
      * 處理邏輯：     * 1. 更新 pausedElapsedTimeMillis = seekToMs     * 2. 重新計算 startTimeNanos（當前系統時間 - 目標時間）     * 3. 同步 Slider 位置     * 4. 播放會從新位置繼續（updateRunnable 會讀取 startTimeNanos）     */
     private val overlayControlReceiver = object : BroadcastReceiver() {
@@ -90,14 +93,12 @@ class MainActivity : AppCompatActivity() {
                     val seekToMs = intent.getLongExtra("seek_to_ms", 0L)
                     Toast.makeText( this@MainActivity, "Seek to ${formatTime(seekToMs)} from overlay", Toast.LENGTH_SHORT ).show()
                     Log.d(TAG, "Overlay seek to: ${formatTime(seekToMs)}")
-                    pausedElapsedTimeMillis = seekToMs                    // 1. 改 og time + 播放基準
-                    startTimeNanos = System.nanoTime() - (seekToMs * 1_000_000)
-                    sliderPlayback.value = seekToMs.toFloat()                    // 2. slider 還是用「原始時間」
-                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())  // 3. 只給 overlay EDIT 用的白 / 黃更新 // 白：輸入時間（原始）
-                    textViewYellowTime.text = formatTime(seekToMs)    // 黃：輸入×時間係數
+                    pausedElapsedTimeMillis = (seekToMs * playbackSpeed).toLong()            // 1. 輸入 og time , * 播放基準處理
+                    sliderPlayback.value = (seekToMs * playbackSpeed).toFloat()                // 2. slider 用處理時間
+                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())  // 3. 只給 overlay EDIT 用的白 / 黃更新 // 白：輸入×時間係數
+                    textViewYellowTime.text = formatTime(seekToMs)    // 黃：輸入
                 }
                 OverlayService.ACTION_NEXT_EP -> {   tryLoadNextEpisode()   }
-                OverlayService.ACTION_OVERLAY_CLOSE -> {   stopOverlayService()   }
             }            
         }
     }    // 【UI 元件】View 引用
@@ -351,7 +352,7 @@ class MainActivity : AppCompatActivity() {
         val overlayControlFilter = IntentFilter().apply {     addAction(OverlayService.ACTION_OVERLAY_SEEK)    }
         LocalBroadcastManager.getInstance(this).registerReceiver(overlayControlReceiver, overlayControlFilter)
         val deathFilter = IntentFilter("OVERLAY_SERVICE_DIED")         ;    LocalBroadcastManager.getInstance(this).registerReceiver(overlayDeathReceiver, deathFilter)
-        val nextEpFilter = IntentFilter().apply {     addAction(OverlayService.ACTION_NEXT_EP)    }
+        val nextEpFilter = IntentFilter(OverlayService.ACTION_NEXT_EP) ;    LocalBroadcastManager.getInstance(this).registerReceiver(overlayNextEpReceiver, nextEpFilter)
     }
     
     private fun buildGoogleSearchUrl(query: String): String { // 把「使用者輸入 + site group」組成 Google 搜尋網址
@@ -569,9 +570,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val overlayDeathReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (isOverlayUIShown && checkOverlayPermission()) {     startOverlayService()    ;    sendSubtitleUpdate(textViewSubtitle.text.toString())    }
-        }// 如果 overlay UI flag 是開的，就重啟 Service// 重新推一次當前字幕給 overlay
+        override fun onReceive(context: Context?, intent: Intent?) {// 如果 overlay UI flag 是開的，就重啟 Service// 重新推一次當前字幕給 overlay
+            if (isOverlayUIShown && checkOverlayPermission()) {     startOverlayService()    ;    sendSubtitleUpdate(textViewSubtitle.text.toString())    }  }
+    }
+    private val overlayCloseReceiver = object : BroadcastReceiver() {//overlay close 加 receiver 接廣播，呼叫 resetPlayback()
+        override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == OverlayService.ACTION_OVERLAY_CLOSE) {  stopOverlayService()  }   }
     }
     
     private fun findCueForTime(time: Long): SubtitleCue? = subtitleCues.find { time >= it.startTimeMs && time < it.endTimeMs }
