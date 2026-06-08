@@ -576,7 +576,7 @@ class MainActivity : AppCompatActivity() {
     }
     private val overlayCloseReceiver = object : BroadcastReceiver() {//overlay close 加 receiver 接廣播，呼叫 resetPlayback()
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == OverlayService.ACTION_OVERLAY_CLOSE) {  resetPlayback()  }
+            if (intent?.action == OverlayService.ACTION_OVERLAY_CLOSE) {  stopOverlayService()  }
         }
     }
     
