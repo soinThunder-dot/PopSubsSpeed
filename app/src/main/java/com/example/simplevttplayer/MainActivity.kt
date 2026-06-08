@@ -399,7 +399,7 @@ class MainActivity : AppCompatActivity() {
                 val oldSpeed = playbackSpeed              // 記住舊的速度，方便後面換算時間
                 playbackSpeed = when (position){0 -> 0.5f; 1 -> 0.75f; 2 -> 1.0f; 3 -> 1.25f; 4 -> 1.5f; 5 -> 2.0f; else -> 1.0f}
                 if (isPlaying) {                          // 如果正在播放，切速度時要調整基準時間
-                    val currentProgress = (System.nanoTime() - startTimeNanos) * oldSpeed / 1_000_000// 先算出目前已經經過的「實際播放毫秒」（含舊速度）
+                    val currentProgress = (System.nanoTime() - startTimeNanos) / 1_000_000// 先算出目前已經經過的「實際播放毫秒」（含舊速度）
                     startTimeNanos = System.nanoTime() - (currentProgress * 1_000_000 / playbackSpeed).toLong()// 反推新的 startTimeNanos，讓畫面不要突然跳
                 }
             }
