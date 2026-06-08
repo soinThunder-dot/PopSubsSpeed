@@ -124,7 +124,7 @@
 
     <!-- Bug1 fix: yellow extra timer = og_timer * speed factor, now visible -->
     <TextView
-        android:id="@+id/textViewYellowTime"
+        android:id="@+id/textViewRedTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
