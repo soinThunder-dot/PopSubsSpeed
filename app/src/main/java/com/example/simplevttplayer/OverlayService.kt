@@ -131,6 +131,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
                 Log.d(TAG, "Move up button clicked!")
                 moveOverlayUpByButtonClick()                               // 浮窗往上移一段距離
             }
+            buttonClose.visibility = View.GONE   // 初始時就隱藏 CLOSE 按鈕
             buttonClose.setOnClickListener {
                 val intent = Intent(ACTION_OVERLAY_CLOSE)
                 LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
@@ -218,6 +219,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             val vis = if (isPaused) View.VISIBLE else View.GONE
             controlPanel.visibility = vis
             if (::buttonOverlayNextEp.isInitialized) { buttonOverlayNextEp.visibility = vis }
+            if (::buttonClose.isInitialized) { buttonClose.visibility = vis }
             Log.d(TAG, "Control panel visibility: ${if (isPaused) "VISIBLE" else "GONE"}")
         }
         //Toast.makeText(this, if (isPaused) "Paused" else "Resumed", Toast.LENGTH_SHORT).show()
