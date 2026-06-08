@@ -574,7 +574,7 @@ class MainActivity : AppCompatActivity() {
             if (isOverlayUIShown && checkOverlayPermission()) {     startOverlayService()    ;    sendSubtitleUpdate(textViewSubtitle.text.toString())    }  }
     }
     private val overlayCloseReceiver = object : BroadcastReceiver() {//overlay close 加 receiver 接廣播，呼叫 resetPlayback()
-        override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == OverlayService.ACTION_OVERLAY_CLOSE) {  stopOverlayService()  }   }
+        override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == OverlayService.ACTION_OVERLAY_CLOSE) {  buttonLaunchOverlay()  }   }
     }
     
     private fun findCueForTime(time: Long): SubtitleCue? = subtitleCues.find { time >= it.startTimeMs && time < it.endTimeMs }
