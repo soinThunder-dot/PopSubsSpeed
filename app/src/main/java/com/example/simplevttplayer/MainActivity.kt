@@ -95,8 +95,8 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Overlay seek to: ${formatTime(seekToMs)}")
                     pausedElapsedTimeMillis = (seekToMs * playbackSpeed).toLong()            // 1. 輸入 og time , * 播放基準處理
                     sliderPlayback.value = (seekToMs * playbackSpeed).toFloat()                // 2. slider 用處理時間
-                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())  // 3. 只給 overlay EDIT 用的白 / 黃更新 // 白：輸入×時間係數
-                    textViewRedTime.text = formatTime(seekToMs)    // 黃：輸入
+                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())  // 3. 只給 overlay EDIT 用的白 / 紅更新 // 白：輸入×時間係數
+                    textViewRedTime.text = formatTime(seekToMs)    // 紅：輸入
                 }
                 OverlayService.ACTION_NEXT_EP -> {   tryLoadNextEpisode()   }
             }            
@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textViewSubtitle: TextView    /** 【文字】顯示當前字幕內容（主要顯示區） */
     private lateinit var sliderPlayback: Slider    /** 【滑桿】Material Slider，拖曳控制播放進度 */
     private lateinit var spinnerSpeed: Spinner    /** 【下拉選單】播放速度選擇器 (6檔變速) */
-    private lateinit var textViewRedTime: TextView    /** 【文字】黃色時間顯示（原始時間，不受速度影響） */
+    private lateinit var textViewRedTime: TextView    /** 【文字】紅色時間顯示（原始時間，不受速度影響） */
     private lateinit var editTextOverlayFontSize: android.widget.EditText    /** 【輸入框】Overlay 字體大小調整 */
     private lateinit var textViewJpToggle: TextView    /** 【文字】Kuromoji 日文語法高亮開關指示器 */
     // 【播放狀態變數】  /**     * 【Kuromoji 啟用狀態】     * true = 啟用日文詞性分析與顏色標記    //* false = 純文字顯示     * 可透過 textViewJpToggle 點擊切換     * 變更時會同步更新 JpGrammarHighlighter.enabled
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
     private var isOverlayUIShown = true
     /**     * 【播放速度倍率】     *      * 預設：1.0x (正常速度)     * 範圍：0.5x ~ 2.0x   Spinner 對應：     * - Position 0 → 0.5x     * - Position 1 → 0.75x     * - Position 2 → 1.0x (預設)     * - Position 3 → 1.25x    * - Position 4 → 1.5x     * - Position 5 → 2.0x
      * 影響範圍：     * 1. 字幕查詢時間 = (經過時間 × playbackSpeed)     * 2. textViewCurrentTime 顯示（加速時間）     * 3. startTimeNanos 重新計算（變速時補償）
-     * 不影響：     * - pausedElapsedTimeMillis（永遠是原始時間）     * - textViewRedTime（黃色時間，固定顯示原始時間）     */
+     * 不影響：     * - pausedElapsedTimeMillis（永遠是原始時間）     * - textViewRedTime（紅色時間，固定顯示原始時間）     */
     private var playbackSpeed: Float = 1.0f
     // 【Data Class】字幕 Cue 資料結構   
     /**     * 【字幕條目資料類別】     *      * 代表一個字幕 cue（subtitle cue），包含時間與文字資訊
