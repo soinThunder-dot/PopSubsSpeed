@@ -93,10 +93,11 @@ class MainActivity : AppCompatActivity() {
                     val seekToMs = intent.getLongExtra("seek_to_ms", 0L)
                     Toast.makeText( this@MainActivity, "Seek to ${formatTime(seekToMs)} from overlay", Toast.LENGTH_SHORT ).show()
                     Log.d(TAG, "Overlay seek to: ${formatTime(seekToMs)}")
-                    pausedElapsedTimeMillis = (seekToMs * playbackSpeed).toLong()            // 1. 輸入 og time , * 播放基準處理
-                    sliderPlayback.value = (seekToMs * playbackSpeed).toFloat()                // 2. slider 用處理時間
-                    textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())  // 3. 只給 overlay EDIT 用的白 / 紅更新 // 白：輸入×時間係數
-                    textViewRedTime.text = formatTime(seekToMs)    // 紅：輸入
+                    val tickingMs = (seekToMs / playbackSpeed).toLong()     // 新增一行：把輸入 og time換算成 tickingTime（內部牆鐘）
+                    pausedElapsedTimeMillis = tickingMs                             // 1. 輸入 og time , * 播放基準處理
+                    sliderPlayback.value = tickingMs.toFloat()                // 2. slider 用處理時間= ticking time
+                    textViewCurrentTime.text = formatTime(seekToMs)  // 3. 只給 overlay EDIT 用的白SRT time（使用者想看到的）
+                    textViewRedTime.text = formatTime(tickingMs)    // // 4. 紅：內部 ticking time
                 }
                 OverlayService.ACTION_NEXT_EP -> {   tryLoadNextEpisode()   }
             }            
@@ -109,11 +110,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var buttonReset: MaterialButton   /** 【按鈕】重設（回到 00:00.000，清空字幕） */
     private lateinit var buttonLaunchOverlay: MaterialButton    /** 【按鈕】啟動/關閉 Overlay 服務 */
     private lateinit var textViewFilePath: TextView    /** 【文字】顯示當前檔案路徑/名稱 */
-    private lateinit var textViewCurrentTime: TextView    /** 【文字】顯示當前播放時間（受速度影響） */
+    private lateinit var textViewCurrentTime: TextView    /** 【文字】顯示SRT播放時間（受速度影響） */
     private lateinit var textViewSubtitle: TextView    /** 【文字】顯示當前字幕內容（主要顯示區） */
     private lateinit var sliderPlayback: Slider    /** 【滑桿】Material Slider，拖曳控制播放進度 */
     private lateinit var spinnerSpeed: Spinner    /** 【下拉選單】播放速度選擇器 (6檔變速) */
-    private lateinit var textViewRedTime: TextView    /** 【文字】紅色時間顯示（原始時間，不受速度影響） */
+    private lateinit var textViewRedTime: TextView    /** 【文字】紅色時間顯示（計時時間） */
     private lateinit var editTextOverlayFontSize: android.widget.EditText    /** 【輸入框】Overlay 字體大小調整 */
     private lateinit var textViewJpToggle: TextView    /** 【文字】Kuromoji 日文語法高亮開關指示器 */
     // 【播放狀態變數】  /**     * 【Kuromoji 啟用狀態】     * true = 啟用日文詞性分析與顏色標記    //* false = 純文字顯示     * 可透過 textViewJpToggle 點擊切換     * 變更時會同步更新 JpGrammarHighlighter.enabled
@@ -299,12 +300,12 @@ class MainActivity : AppCompatActivity() {
             if (uriString.isNullOrEmpty()) {  Toast.makeText(this, "No last file to reload.", Toast.LENGTH_SHORT).show()  ;  return@setOnClickListener   } // 檢查是否有上次的檔案記錄 // 解析 URI 並載入檔案
             val uri = Uri.parse(uriString)
             handleSubtitleFileSelected(uri)            
-            val savedTimestamp = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)  // 【2.8 新增】恢復上次儲存的播放位置
-            if (savedTimestamp > 0L && subtitleCues.isNotEmpty()) {
-                Log.d(TAG, "Restoring timestamp: ${formatTime(savedTimestamp)}")
-                pausedElapsedTimeMillis = savedTimestamp                // 設定播放位置
-                sliderPlayback.value = savedTimestamp.toFloat()
-                Toast.makeText(   this,   "已恢復至 ${formatTime(savedTimestamp)}",   Toast.LENGTH_SHORT   ).show() // 提示使用者
+            val savedSrtMs = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)  // 【2.8 新增】恢復上次儲存的播放位置
+            if (savedSrtMs > 0L && subtitleCues.isNotEmpty()) {
+                val restoredRealMs = (savedSrtMs / playbackSpeed).toLong()  // 內部 tickingTime = SRT / current speed
+                pausedElapsedTimeMillis = restoredRealMs                // 設定播放位置
+                sliderPlayback.value = restoredRealMs.toFloat()
+                Toast.makeText(  this, "已恢復至 ${formatTime(savedSrtMs)}", Toast.LENGTH_SHORT ).show() // 提示使用者
             }
         }        /**         * 【播放/暫停按鈕】         * 切換播放狀態         */
         buttonPlayPause.setOnClickListener {   Log.d(TAG, "Play/Pause button clicked")  ;  togglePlayPause() }        /**         * 【重設按鈕】         * 回到 00:00.000，清空字幕顯示         */
@@ -385,7 +386,8 @@ class MainActivity : AppCompatActivity() {
     private fun saveCurrentTimestamp() {
         if (!isPlaying && pausedElapsedTimeMillis == 0L) return  // 完全沒播過就不用存
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE) // 取得 app SharedPreferences
-        prefs.edit().putLong(KEY_LAST_TIMESTAMP, pausedElapsedTimeMillis).apply()  // 把目前暫停時間寫入 KEY_LAST_TIMESTAMP
+        val srtMs = (pausedElapsedTimeMillis * playbackSpeed).toLong()    // SRT time = tickingTime * speed
+        prefs.edit().putLong(KEY_LAST_TIMESTAMP, srtMs ).apply()  // 把目前暫停時間寫入 KEY_LAST_TIMESTAMP
         Log.d(TAG, "Auto-savedTimestamp: ${formatTime(pausedElapsedTimeMillis)}")
     }
     
@@ -399,11 +401,16 @@ class MainActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val oldSpeed = playbackSpeed              // 記住舊的速度，方便後面換算時間
                 playbackSpeed = when (position){0 -> 0.5f; 1 -> 0.75f; 2 -> 1.0f; 3 -> 1.25f; 4 -> 1.5f; 5 -> 2.0f; else -> 1.0f}
-                if (isPlaying) {                          // 如果正在播放，切速度時要調整基準時間
-                    val currentProgress = (System.nanoTime() - startTimeNanos) / 1_000_000// 先算出目前已經經過的「實際播放毫秒」（含舊速度）
-                    startTimeNanos = System.nanoTime() - (currentProgress * 1_000_000 / playbackSpeed).toLong()// 反推新的 startTimeNanos，讓畫面不要突然跳
-                }
-            }
+                val currentRealMs = if (isPlaying) { (System.nanoTime() - startTimeNanos) / 1_000_000
+                } else { pausedElapsedTimeMillis }    // 1) 先算目前的 SRT time（用舊 speed） 如果在播，用現在的 eR；如果暫停，用 pausedElapsedTimeMillis。
+                val currentSrtMs = (currentRealMs * oldSpeed).toLong()
+                val newRealMs = (currentSrtMs / playbackSpeed).toLong()  // 2) 用新 speed 算新的 tickingTime：eR1 = SRT / newSpeed
+                pausedElapsedTimeMillis = newRealMs // 3) 更新內部狀態 & UI
+                sliderPlayback.value = newRealMs.toFloat()
+                textViewCurrentTime.text = formatTime(currentSrtMs)   // 白：SRT time 固定
+                textViewRedTime.text = formatTime(newRealMs)          // 紅：新的 ticking time
+                if (isPlaying) { startTimeNanos = System.nanoTime() - newRealMs * 1_000_000L }
+            }// 重新對齊 startTimeNanos，讓 eR 從 newRealMs 繼續往前跑
             override fun onNothingSelected(parent: AdapterView<*>?) {} // 沒選到任何項目時不做事
         }
     }
