@@ -96,7 +96,7 @@ class MainActivity : AppCompatActivity() {
                     pausedElapsedTimeMillis = (seekToMs * playbackSpeed).toLong()            // 1. 輸入 og time , * 播放基準處理
                     sliderPlayback.value = (seekToMs * playbackSpeed).toFloat()                // 2. slider 用處理時間
                     textViewCurrentTime.text = formatTime((seekToMs * playbackSpeed).toLong())  // 3. 只給 overlay EDIT 用的白 / 黃更新 // 白：輸入×時間係數
-                    textViewYellowTime.text = formatTime(seekToMs)    // 黃：輸入
+                    textViewRedTime.text = formatTime(seekToMs)    // 黃：輸入
                 }
                 OverlayService.ACTION_NEXT_EP -> {   tryLoadNextEpisode()   }
             }            
@@ -113,7 +113,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textViewSubtitle: TextView    /** 【文字】顯示當前字幕內容（主要顯示區） */
     private lateinit var sliderPlayback: Slider    /** 【滑桿】Material Slider，拖曳控制播放進度 */
     private lateinit var spinnerSpeed: Spinner    /** 【下拉選單】播放速度選擇器 (6檔變速) */
-    private lateinit var textViewYellowTime: TextView    /** 【文字】黃色時間顯示（原始時間，不受速度影響） */
+    private lateinit var textViewRedTime: TextView    /** 【文字】黃色時間顯示（原始時間，不受速度影響） */
     private lateinit var editTextOverlayFontSize: android.widget.EditText    /** 【輸入框】Overlay 字體大小調整 */
     private lateinit var textViewJpToggle: TextView    /** 【文字】Kuromoji 日文語法高亮開關指示器 */
     // 【播放狀態變數】  /**     * 【Kuromoji 啟用狀態】     * true = 啟用日文詞性分析與顏色標記    //* false = 純文字顯示     * 可透過 textViewJpToggle 點擊切換     * 變更時會同步更新 JpGrammarHighlighter.enabled
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity() {
     private var isOverlayUIShown = true
     /**     * 【播放速度倍率】     *      * 預設：1.0x (正常速度)     * 範圍：0.5x ~ 2.0x   Spinner 對應：     * - Position 0 → 0.5x     * - Position 1 → 0.75x     * - Position 2 → 1.0x (預設)     * - Position 3 → 1.25x    * - Position 4 → 1.5x     * - Position 5 → 2.0x
      * 影響範圍：     * 1. 字幕查詢時間 = (經過時間 × playbackSpeed)     * 2. textViewCurrentTime 顯示（加速時間）     * 3. startTimeNanos 重新計算（變速時補償）
-     * 不影響：     * - pausedElapsedTimeMillis（永遠是原始時間）     * - textViewYellowTime（黃色時間，固定顯示原始時間）     */
+     * 不影響：     * - pausedElapsedTimeMillis（永遠是原始時間）     * - textViewRedTime（黃色時間，固定顯示原始時間）     */
     private var playbackSpeed: Float = 1.0f
     // 【Data Class】字幕 Cue 資料結構   
     /**     * 【字幕條目資料類別】     *      * 代表一個字幕 cue（subtitle cue），包含時間與文字資訊
@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
      *     if (savedTimestamp > 0L && subtitleCues.isNotEmpty()) {     *         // 設定播放位置到上次進度
      *         pausedElapsedTimeMillis = savedTimestamp
      *         sliderPlayback.value = savedTimestamp.toFloat()     *   
-     *         textViewYellowTime.text = formatTime(savedTimestamp)           *         // 更新時間顯示
+     *         textViewRedTime.text = formatTime(savedTimestamp)           *         // 更新時間顯示
      *         textViewCurrentTime.text = formatTime((savedTimestamp * playbackSpeed).toLong())     *       
      *         Toast.makeText(this, "已恢復至 ${formatTime(savedTimestamp)}", Toast.LENGTH_SHORT).show()       *         // 顯示 Toast 提示
      *     }
@@ -280,7 +280,7 @@ class MainActivity : AppCompatActivity() {
         textViewFilePath = findViewById(R.id.textViewFilePath)
         textViewCurrentTime = findViewById(R.id.textViewCurrentTime)
         textViewSubtitle = findViewById(R.id.textViewSubtitle)
-        textViewYellowTime = findViewById(R.id.textViewYellowTime)        
+        textViewRedTime = findViewById(R.id.textViewRedTime)        
         // 播放控制
         sliderPlayback = findViewById(R.id.sliderPlayback)
         spinnerSpeed = findViewById(R.id.spinnerSpeed)        
@@ -369,7 +369,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSliderListener() {
         sliderPlayback.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) {  textViewCurrentTime.text = formatTime((value * playbackSpeed).toLong()) ;  textViewYellowTime.text = formatTime(value.toLong())  }
+            if (fromUser) {  textViewCurrentTime.text = formatTime((value * playbackSpeed).toLong()) ;  textViewRedTime.text = formatTime(value.toLong())  }
         }// 只在使用者手動拖動時更新顯示// 照速度換算後的時間// 原始 slider 位置（未乘速度）
         sliderPlayback.addOnSliderTouchListener(object : OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {
@@ -536,7 +536,7 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(updateRunnable)   // ★ 停掉舊的 runnable
         pausePlayback(); pausedElapsedTimeMillis = 0L; startTimeNanos = 0L
         textViewSubtitle.text = "[Ready to play]"; textViewCurrentTime.text = formatTime(0)
-        textViewYellowTime.text = formatTime(0); sliderPlayback.value = 0.0f; sendSubtitleUpdate("")
+        textViewRedTime.text = formatTime(0); sliderPlayback.value = 0.0f; sendSubtitleUpdate("")
     }
 
     private fun resetPlaybackStateOnError() {
@@ -554,7 +554,7 @@ class MainActivity : AppCompatActivity() {
             if (!isPlaying) return
             val eR = (System.nanoTime() - startTimeNanos) / 1_000_000
             textViewCurrentTime.text = formatTime((eR * playbackSpeed).toLong())
-            textViewYellowTime.text = formatTime(eR)
+            textViewRedTime.text = formatTime(eR)
             if (!sliderPlayback.isPressed && eR.toFloat() <= sliderPlayback.valueTo) sliderPlayback.value = eR.toFloat()
             val cue = findCueForTime((eR * playbackSpeed).toLong())  // ✅ 這樣字幕查詢才會根據速度調整後的時間去比對
             val nT = cue?.text ?: ""
