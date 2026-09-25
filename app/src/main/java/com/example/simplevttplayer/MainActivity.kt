@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
         private const val AUTO_SAVE_INTERVAL_MS = 180_000L
         private const val REQUEST_OPEN_FOLDER = 2001  //*!*使用者選字幕時，同步觸發選資料夾
         private const val GOOGLE_BASE = "https://www.google.com/search?udm=14&q="// Google 搜尋 base URL（固定帶 udm=14）+站台 group
-        private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org OR site:addic7ed.com)"
+        private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org OR site:addic7ed.com OR site:subtitlecat.com)"
     }
     private lateinit var editTextQuery: EditText
     // 【ActivityResultLauncher】檔案選擇器 & 權限請求啟動器
@@ -81,8 +81,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+        // [3.0 修改] 浮窗上方按鈕（原 Next）改為執行「Reload Last File」原本：tryLoadNextEpisode() 現在：reloadLastFile()
+        //   ※ Main 畫面上的「Try next ep」按鈕不受影響，仍是找下一集 ※ 廣播 Action 仍沿用 ACTION_NEXT_EP，所以 OverlayService 不用改
     private val overlayNextEpReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {    if (intent?.action == OverlayService.ACTION_NEXT_EP) { tryLoadNextEpisode() }    }
+        override fun onReceive(context: Context?, intent: Intent?) {    if (intent?.action == OverlayService.ACTION_NEXT_EP) { reloadLastFile() }    }
     }
     /**     * 【2.8 新增】Overlay 控制面板接收器     *      * 監聽事件：     * ===== ACTION_OVERLAY_SEEK =====     * Intent Extra：     * - "seek_to_ms" (Long) - 目標時間（毫秒）     * 
      * 處理邏輯：     * 1. 更新 pausedElapsedTimeMillis = seekToMs     * 2. 重新計算 startTimeNanos（當前系統時間 - 目標時間）     * 3. 同步 Slider 位置     * 4. 播放會從新位置繼續（updateRunnable 會讀取 startTimeNanos）     */
@@ -98,9 +100,8 @@ class MainActivity : AppCompatActivity() {
                     sliderPlayback.value = tickingMs.toFloat()                // 2. slider 用處理時間= ticking time
                     textViewCurrentTime.text = formatTime(seekToMs)  // 3. 只給 overlay EDIT 用的白SRT time（使用者想看到的）
                     textViewRedTime.text = formatTime(tickingMs)    // // 4. 紅：內部 ticking time
-                }
-                OverlayService.ACTION_NEXT_EP -> {   tryLoadNextEpisode()   }
-            }            
+                }           // [3.0 修改] 同步改成 reloadLastFile()，與 overlayNextEpReceiver 一致, receiver 的 filter  OVERLAY_SEEK保持一致）
+                OverlayService.ACTION_NEXT_EP -> {   reloadLastFile()   }      }            
         }
     }    // 【UI 元件】View 引用
     private lateinit var buttonSelectFile: MaterialButton    /** 【按鈕】選擇字幕檔案 */
@@ -293,21 +294,9 @@ class MainActivity : AppCompatActivity() {
         // 【階段 3】按鈕監聽器         * 【選擇檔案按鈕】         * 開啟系統檔案選擇器（SAF）         */
         buttonSelectFile.setOnClickListener {   Log.d(TAG, "Select file button clicked")  ;  openFilePicker()   }
         buttonTryNextEp.setOnClickListener { tryLoadNextEpisode() } //按 Main 那顆「Find next ep」
-        buttonReloadLast.setOnClickListener {        /**  Reload Last File 按鈕】         * 重新載入上次使用的字幕檔案         * 2.8 新增：同時恢復上次播放位置         */
-            Log.d(TAG, "Reload last file button clicked")            
-            val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            val uriString = prefs.getString(KEY_LAST_SUBTITLE_URI, null)            
-            if (uriString.isNullOrEmpty()) {  Toast.makeText(this, "No last file to reload.", Toast.LENGTH_SHORT).show()  ;  return@setOnClickListener   } // 檢查是否有上次的檔案記錄 // 解析 URI 並載入檔案
-            val uri = Uri.parse(uriString)
-            handleSubtitleFileSelected(uri)            
-            val savedSrtMs = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)  // 【2.8 新增】恢復上次儲存的播放位置
-            if (savedSrtMs > 0L && subtitleCues.isNotEmpty()) {
-                val restoredRealMs = (savedSrtMs / playbackSpeed).toLong()  // 內部 tickingTime = SRT / current speed
-                pausedElapsedTimeMillis = restoredRealMs                // 設定播放位置
-                sliderPlayback.value = restoredRealMs.toFloat()
-                Toast.makeText(  this, "已恢復至 ${formatTime(savedSrtMs)}", Toast.LENGTH_SHORT ).show() // 提示使用者
-            }
-        }        /**         * 【播放/暫停按鈕】         * 切換播放狀態         */
+        // [3.0 修改] Reload Last 按鈕：程式碼搬到 reloadLastFile() 函數,讓 Main 按鈕 和 浮窗上方按鈕 共用同一套邏輯（避免重複程式碼）
+        buttonReloadLast.setOnClickListener {   Log.d(TAG, "Reload last file button clicked") ;  reloadLastFile()  }   
+        /**         * 【播放/暫停按鈕】         * 切換播放狀態         */
         buttonPlayPause.setOnClickListener {   Log.d(TAG, "Play/Pause button clicked")  ;  togglePlayPause() }        /**         * 【重設按鈕】         * 回到 00:00.000，清空字幕顯示         */
         buttonReset.setOnClickListener {       Log.d(TAG, "Reset button clicked")       ;  resetPlayback()   }        // ===============================================================================
         // 【階段 4】Kuromoji 切換            /**         * 更新 Kuromoji 切換指示器的顏色         * - 啟用：綠色 (#4CAF50)         * - 停用：灰色 (#9E9E9E)         */
@@ -635,6 +624,28 @@ class MainActivity : AppCompatActivity() {
         val prefixBefore = namePart.substring(0, xMatch.range.first) // "Show.09x05" 前面的東西
         val xChar = namePart[xMatch.range.first + seasonStr.length]  // 原始的 'x' 或 'X'
         return prefixBefore + seasonStr + xChar + nextEp             // "Show.09x06"（保留原有位數）[web:75][web:76]
+    }
+     // [3.0 新增] reloadLastFile：重新載入上次的字幕檔 + 恢復上次儲存的播放位置,內容 = buttonReloadLast程式碼（邏輯完全相同）
+    //     1. Main 畫面的 Reload Last 按鈕（buttonReloadLast)2. 浮窗上方的 Reload 按鈕（廣播 ACTION_NEXT_EP → overlayNextEpReceiver）
+    //   流程：1. 從 SharedPreferences 讀 KEY_LAST_SUBTITLE_URI（上次檔案位置）2. 沒有記錄 → Toast 提示後結束
+    //     3. 有記錄 → handleSubtitleFileSelected() 重新載入並解析
+    //     4. 讀 KEY_LAST_TIMESTAMP（存的是 SRT 時間）→ 除以目前速度換成內部 ticking time
+    //     5. 設定 pausedElapsedTimeMillis 與 slider，按播放就從該位置繼續
+    //   ※ 每次暫停都會 saveCurrentTimestamp()，所以在浮窗暫停後按 Reload， 會重新載入目前這個檔案並回到剛剛暫停的位置
+    private fun reloadLastFile() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)              // 取得 app 的 SharedPreferences
+        val uriString = prefs.getString(KEY_LAST_SUBTITLE_URI, null)           // 讀上次檔案 URI
+        if (uriString.isNullOrEmpty()) {                                        // 沒有上次檔案記錄
+            Toast.makeText(this, "No last file to reload.", Toast.LENGTH_SHORT).show() ;  return   }
+        val uri = Uri.parse(uriString)                                          // 字串 → Uri
+        handleSubtitleFileSelected(uri)                                         // 重新載入並解析字幕
+        val savedSrtMs = prefs.getLong(KEY_LAST_TIMESTAMP, 0L)                  // 讀上次儲存的 SRT 時間
+        if (savedSrtMs > 0L && subtitleCues.isNotEmpty()) {                     // 有進度且載入成功
+            val restoredRealMs = (savedSrtMs / playbackSpeed).toLong()          // 內部 tickingTime = SRT / 目前速度
+            pausedElapsedTimeMillis = restoredRealMs                            // 設定播放位置
+            sliderPlayback.value = restoredRealMs.toFloat()                     // 同步 slider
+            Toast.makeText(this, "已恢復至 ${formatTime(savedSrtMs)}", Toast.LENGTH_SHORT).show() // 提示使用者
+        }
     }
     private fun tryLoadNextEpisode() {    // 綁在 buttonTryNextEp 的 onClick
         Log.d(TAG, "tryLoadNextEpisode() called")
