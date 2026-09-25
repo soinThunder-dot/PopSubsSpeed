@@ -1,13 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- overlay_layout.xml: Main overlay (bottom-center subtitle + pause control panel) -->
+<!-- overlay_layout.xml: Main overlay (bottom-center subtitle + pause control panel)
+     【3.1 修改版】
+     A. 上方三個元件（Close / Next(Reload) / MIN-SEC 面板）
+        原本：三個各自獨立的直向列（上下堆疊）
+        現在：合併成「同一個橫向列 topControlRow」，在 Y 軸同一高度並排
+        ※ 三個元件的 id 完全沒變，所以 OverlayService.kt 裡控制
+          顯示/隱藏（暫停時 VISIBLE、播放時 GONE）的程式碼不用改
+     B. 主列（字幕那一列）左邊新增一個小方塊 buttonMoveDown
+        大小 = 右邊綠色方塊 18dp 的 2/3 = 12dp，顏色不同（橘色）
+        功能：點一下浮窗往下移（與右邊上移同樣 36px）
+     ================================================================ -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="8dp"
     android:background="@android:color/transparent">
-    <!-- Close 按鈕列：直接貼在 Next 上面 -->
+    <!--  【上方控制列】topControlRow：Close + Next + MIN/SEC 同一列
+         - orientation="horizontal"：子元件由左到右排列（同一 Y 高度）
+         - gravity="center_vertical"：三個元件高度不同時，垂直置中對齊
+         - layout_gravity="center_horizontal"：整列在浮窗內水平置中
+         - 三個子元件在播放時都是 GONE → 這一列會自動縮成 0 高度，不佔空間
+         ============================================================ -->
     <LinearLayout
+        android:id="@+id/topControlRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -23,28 +39,29 @@
             android:paddingTop="2dp"
             android:paddingBottom="2dp"
             android:background="#CC000000"
-            android:textColor="#FF0000" />
-    </LinearLayout>
-    <!-- Next 按鈕列：直接貼在 MIN/SEC 上面 -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal">
+            android:textColor="#FF0000" 
+            android:layout_marginEnd="6dp" />
+    <!-- 【Next 按鈕 → 改為 Reload】
+             id 保持 buttonOverlayNextEp 不變（避免改動 OverlayService 綁定程式碼）
+             文字改成 "Reload"，因為功能已改成 MainActivity 的「Reload Last File」
+             （功能改動在 MainActivity.kt，見說明文件第 2 部分）
+             ※ 如果想保留原文字，把 "Reload" 改回 "Next" 即可 -->
         <Button
             android:id="@+id/buttonOverlayNextEp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Next"
+            android:text="Reload"
             android:textSize="12sp"
             android:paddingLeft="2dp"
             android:paddingRight="2dp"
             android:paddingTop="2dp"
             android:paddingBottom="2dp"
             android:background="#CC000000"
-            android:textColor="#FFFFFF" />
-    </LinearLayout>
-    <!-- 控制面板：只剩 MIN / SEC 兩格 -->
+            android:textColor="#FFFFFF" 
+            android:layout_marginEnd="6dp" />
+        <!-- 【控制面板】MIN / SEC 兩格輸入框（跳到指定時間）
+             預設 visibility="gone"，暫停時由 OverlayService 設為 VISIBLE
+             內容與原本完全相同，只是從獨立一列移進 topControlRow -->
     <LinearLayout
         android:id="@+id/controlPanel"
         android:layout_width="wrap_content"
@@ -105,17 +122,26 @@
             android:padding="4dp"
             android:gravity="center" 
             android:imeOptions="actionDone" />
-
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Main row: Subtitle text + move-up button -->
+    <!-- Main row: Subtitle text + move-up button【主列】左方塊（下移）+ 字幕文字 + 右方塊（上移） -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginTop="4dp">
-
+        <View
+            android:id="@+id/buttonMoveDown"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="#FF9800"
+            android:alpha="0.3"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Move overlay down" />
         <TextView
             android:id="@+id/textViewOverlaySubtitle"
             android:layout_width="wrap_content"
@@ -132,8 +158,8 @@
         <!-- Green move-up button -->
         <View
             android:id="@+id/buttonMoveUp"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
             android:background="#4CAF50"
             android:alpha="0.3"
             android:clickable="true"
