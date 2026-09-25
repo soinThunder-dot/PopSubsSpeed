@@ -130,6 +130,12 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             buttonMoveUp?.setOnClickListener {
                 Log.d(TAG, "Move up button clicked!")
                 moveOverlayUpByButtonClick()                               // 浮窗往上移一段距離
+            }// ===== [3.0 新增] 左側橘色小方塊：點擊讓浮窗往下移 =====
+            // 用 View? + ?. 安全呼叫：就算 XML 裡沒有 buttonMoveDown 也不會閃退
+            val buttonMoveDown: View? = overlayView.findViewById(R.id.buttonMoveDown) // 綁定下移方塊
+            buttonMoveDown?.setOnClickListener {
+                Log.d(TAG, "Move down button clicked!")
+                moveOverlayDownByButtonClick()                             // 浮窗往下移一段距離（與上移同距離）
             }
             buttonClose.visibility = View.GONE   // 初始時就隱藏 CLOSE 按鈕
             buttonClose.setOnClickListener {
@@ -241,6 +247,20 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
                 windowManager.updateViewLayout(overlayView, params)        // 套用到畫面
                 Log.d(TAG, "Overlay moved up. New Y: ${params.y}")
             } catch (e: Exception) {  Log.e(TAG, "Error moving overlay up", e)  }
+        } else {  Log.w(TAG, "Cannot move overlay: views not initialized")  } // 還沒初始化就被點
+    }
+    private fun moveOverlayDownByButtonClick() {
+        if (::params.isInitialized && ::overlayView.isInitialized) {      // 確保浮窗已建立
+            val moveDistance = 36                                          // 每次往下移動距離（px），與上移相同
+            if (params.y <= 0) {                                           // 已經在最底部
+                Log.d(TAG, "Overlay already at bottom (Y = ${params.y}), skip")
+                return         }
+            Log.d(TAG, "Moving overlay down by $moveDistance pixels")
+            params.y = (params.y - moveDistance).coerceAtLeast(0)          // 減少 Y 值 = 往下，最低 0
+            try {
+                windowManager.updateViewLayout(overlayView, params)        // 套用新位置到畫面
+                Log.d(TAG, "Overlay moved down. New Y: ${params.y}")
+            } catch (e: Exception) {  Log.e(TAG, "Error moving overlay down", e)  }
         } else {  Log.w(TAG, "Cannot move overlay: views not initialized")  } // 還沒初始化就被點
     }
     
