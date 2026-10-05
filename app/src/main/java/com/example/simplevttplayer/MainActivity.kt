@@ -44,7 +44,8 @@ import com.google.android.material.slider.Slider.OnChangeListener    // Slider �
 import com.google.android.material.slider.Slider.OnSliderTouchListener// Slider 觸控開始/結束監聽
 import java.io.BufferedReader  // 包裝 InputStream 成逐行讀的 reader
 import java.io.InputStream     // 檔案的原始位元流（SAF 打開字幕檔時用）
-import java.net.URLEncoder     // 將搜尋字串轉成 URL safe 格式（Google 搜尋）import java.text.Normalizer   // [Fix B] 統一日文字元的 Unicode 形式（NFC）
+import java.net.URLEncoder     // 將搜尋字串轉成 URL safe 格式（Google 搜尋）
+import java.text.Normalizer   // [Fix B] 統一日文字元的 Unicode 形式（NFC）
 
 class MainActivity : AppCompatActivity() {
     companion object {    // 【Companion Object】靜態常數與類別級別變數                  /** 【廣播 Action 常數】與 OverlayService 通訊* 從 OverlayService 引用確保兩邊完全一致，避免打字錯誤*/
