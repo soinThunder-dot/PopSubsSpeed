@@ -19,6 +19,7 @@ import android.content.BroadcastReceiver  // 用來接 LocalBroadcast 的基類
 import android.content.Context        // Android 上下文物件
 import android.content.Intent         // 廣播與啟動元件用的 Intent
 import android.content.IntentFilter   // 註冊時指定要監聽哪些 Action
+import android.content.pm.ServiceInfo   // [Fix A] Android 14+ startForeground 需要指定服務類型
 import android.graphics.PixelFormat   // 控制 Window 像素格式（TRANSLUCENT 等）
 import android.os.Build             
 import android.os.IBinder             // Service 綁定介面型別
@@ -36,6 +37,7 @@ import android.app.NotificationManager // （目前未用）管理通知
 import android.app.PendingIntent       // （目前未用）通知點擊行為
 import androidx.core.app.NotificationCompat // （目前未用）建 notification 用 helper
 
+
 class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕 + 控制面板的 Service
     companion object {                // ============================================================
         // 廣播 Action 常數區 (LocalBroadcast 指令定義)        // ============================================================
@@ -51,6 +53,8 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
         const val ACTION_UPDATE_TIME = "com.example.simplevttplayer.UPDATE_TIME"        // 預留：時間戳更新，目前沒用
         const val ACTION_NEXT_EP = "com.example.simplevttplayer.NEXT_EP"                // Overlay→Main：下一集
         const val ACTION_OVERLAY_CLOSE = "com.example.simplevttplayer.ACTION_OVERLAY_CLOSE"//加 close 按鈕 
+        const val NOTIFICATION_ID = 1001                // [Fix A] 前景服務通知用：通知 ID 與通知頻道 ID
+        const val CHANNEL_ID = "popsubs_overlay_channel"
         val TAG: String = OverlayService::class.java.simpleName                         // Logcat tag
     }
     private lateinit var windowManager: WindowManager           // 系統 Window 管理器，用來控制浮窗
@@ -94,6 +98,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
 
     override fun onCreate() {
         super.onCreate()
+        startAsForeground()   // [Fix A] 一建立就升級成前景服務（系統規定 5 秒內必須呼叫）
         Log.d(TAG, "OverlayService onCreate")
         try {
             overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null) // inflate 浮窗 layout
@@ -170,9 +175,33 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             Log.e(TAG, "Error during OverlayService onCreate", e)
             Toast.makeText(this, "Failed to create overlay.", Toast.LENGTH_SHORT).show() // 提示使用者
             stopSelf()                                                     // 初始化失敗就停掉 Service
-        }
+        }    // [Fix A] startAsForeground：把服務升級成「前景服務」在通知列常駐一則通知，系統就不會在背景/關螢幕時隨意殺掉
+    }//   - Android 8.0+ 必須先建立 (NotificationChannel) Android 14+ 必須帶上服務類型 FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+    //     （要與 Manifest 的 foregroundServiceType="specialUse" 一致）點通知 → 回到 MainActivity
+    private fun startAsForeground() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {      // 8.0+ 要建立頻道// LOW：不響鈴不震動
+                val channel = NotificationChannel( CHANNEL_ID, "PopSubs 浮窗字幕", NotificationManager.IMPORTANCE_LOW  )
+                getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            }
+            val piFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)          // 6.0+ 要求標示 IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            else PendingIntent.FLAG_UPDATE_CURRENT
+            val openApp = PendingIntent.getActivity(                                   // 點通知 → 開 MainActivity
+                this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), piFlags   )
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("PopSubs 浮窗字幕執行中")
+                .setContentText("點此回到 App")
+                .setSmallIcon(android.R.drawable.ic_media_play)                        // 系統內建小圖示，避免白方塊
+                .setContentIntent(openApp)
+                .setOngoing(true)                                                      // 不能被滑掉
+                .build()
+            if (Build.VERSION.SDK_INT >= 34) { startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else { startForeground(NOTIFICATION_ID, notification)  }// Android 14+ 要帶類型
+            Log.d(TAG, "Started as foreground service")
+        } catch (e: Exception) { Log.e(TAG, "startForeground failed", e) }   // 失敗也不讓 App 閃退
     }
-
+    
     private fun sendTimeToMainFromOverlay(min: Int, sec: Int) {
         val totalMs = (min * 60 + sec) * 1000L                             // 分→秒→毫秒
         val intent = Intent(OverlayService.ACTION_OVERLAY_SEEK)            // 建立 OVERLAY_SEEK intent
