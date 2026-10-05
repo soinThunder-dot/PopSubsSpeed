@@ -42,9 +42,9 @@ import com.google.android.material.button.MaterialButton // Material Design 風�
 import com.google.android.material.slider.Slider         // Material Slider（時間軸）
 import com.google.android.material.slider.Slider.OnChangeListener    // Slider 變動監聽介面
 import com.google.android.material.slider.Slider.OnSliderTouchListener// Slider 觸控開始/結束監聽
-import java.io.BufferedReader            // 包裝 InputStream 成逐行讀的 reader
-import java.io.InputStream               // 檔案的原始位元流（SAF 打開字幕檔時用）
-import java.net.URLEncoder               // 將搜尋字串轉成 URL safe 格式（Google 搜尋）
+import java.io.BufferedReader  // 包裝 InputStream 成逐行讀的 reader
+import java.io.InputStream     // 檔案的原始位元流（SAF 打開字幕檔時用）
+import java.net.URLEncoder     // 將搜尋字串轉成 URL safe 格式（Google 搜尋）import java.text.Normalizer   // [Fix B] 統一日文字元的 Unicode 形式（NFC）
 
 class MainActivity : AppCompatActivity() {
     companion object {    // 【Companion Object】靜態常數與類別級別變數                  /** 【廣播 Action 常數】與 OverlayService 通訊* 從 OverlayService 引用確保兩邊完全一致，避免打字錯誤*/
@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         private const val REQUEST_OPEN_FOLDER = 2001  //*!*使用者選字幕時，同步觸發選資料夾
         private const val GOOGLE_BASE = "https://www.google.com/search?udm=14&q="// Google 搜尋 base URL（固定帶 udm=14）+站台 group
         private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org OR site:addic7ed.com OR site:subtitlecat.com)"
+        private const val KEY_LAST_FOLDER_URI = "last_folder_uri"   // [Fix B] 儲存字幕資料夾 URI
     }
     private lateinit var editTextQuery: EditText
     // 【ActivityResultLauncher】檔案選擇器 & 權限請求啟動器
@@ -255,6 +256,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        val prefsB = getSharedPreferences(PREFS_NAME, MODE_PRIVATE) // [Fix B] 還原上次的資料夾與字幕檔 URI（只在持久權限仍有效時才用）
+        prefsB.getString(KEY_LAST_FOLDER_URI, null)?.let { s ->
+            val u = Uri.parse(s)
+            val stillGranted = contentResolver.persistedUriPermissions.any { it.uri == u && it.isReadPermission }
+            if (stillGranted) lastFolderUri = u    }      // 權限還在才還原   
+        prefsB.getString(KEY_LAST_SUBTITLE_URI, null)?.let { lastSubtitleUri = Uri.parse(it) }
+        
         Log.d(TAG, "MainActivity onCreate")        // ===============================================================================
         // 【階段 1】註冊 ActivityResultLauncher    * Overlay 權限請求 Launcher    *  流程：    1. requestOverlayPermission() 呼叫 launcher.launch()    * 2. 跳轉系統設定頁面     * 3. 使用者授權後返回    * 4. Callback 中檢查權限並啟動服務         */
         overlayPermissionLauncher = registerForActivityResult(
@@ -490,11 +498,13 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
             overlayPermissionLauncher.launch(i)
-        }
-    }
-
-    private fun startOverlayService() {        if (checkOverlayPermission()) startService(Intent(this, OverlayService::class.java))    }
-
+        }// [Fix A] 改用 startForegroundService：Android 8.0+ 要啟動前景服務必須用這個
+    }//   ContextCompat 會自動判斷版本（舊版自動改用 startService）
+    //   try-catch：Android 12+ 某些背景情況不允許啟動前景服務，避免閃退
+    private fun startOverlayService() {  if (!checkOverlayPermission()) return
+        try {  ContextCompat.startForegroundService(this, Intent(this, OverlayService::class.java))
+        } catch (e: Exception) {  Log.e(TAG, "Cannot start overlay service", e)  }   }
+    
     private fun stopOverlayService() { stopService(Intent(this, OverlayService::class.java)) }
 
     private fun sendSubtitleUpdate(text: String) {
@@ -598,7 +608,9 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQUEST_OPEN_FOLDER && resultCode == Activity.RESULT_OK) {
             val folderUri = data?.data ?: return
             contentResolver.takePersistableUriPermission( folderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION )
-            lastFolderUri = folderUri  //*!*
+            lastFolderUri = folderUri  //*!*           
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit() // [Fix B] 存起來，App 被殺或重開後還記得資料夾
+                .putString(KEY_LAST_FOLDER_URI, folderUri.toString()).apply()
             Toast.makeText(this, "資料夾已設定", Toast.LENGTH_SHORT).show()
         }
     }
@@ -645,33 +657,58 @@ class MainActivity : AppCompatActivity() {
             pausedElapsedTimeMillis = restoredRealMs                            // 設定播放位置
             sliderPlayback.value = restoredRealMs.toFloat()                     // 同步 slider
             Toast.makeText(this, "已恢復至 ${formatTime(savedSrtMs)}", Toast.LENGTH_SHORT).show() // 提示使用者
-        }
-    }
-    private fun tryLoadNextEpisode() {    // 綁在 buttonTryNextEp 的 onClick
+        }    // [Fix B] tryLoadNextEpisode：在同資料夾找下一集字幕並載入    //   改進：
+    }    //   1. 每個失敗步驟顯示不同訊息（方便知道卡在哪）    //   2. 沒設定資料夾 → 直接跳出資料夾選擇器，不再只顯示錯誤
+    //   3. 檔名先轉成 NFC 再比對（解決日文濁音 NFD/NFC 不一致）    //   4. 找不到時，改用「季數 + 集數數字」比對（E9 → E10、E09 vs E9 都能找到）
+    private fun tryLoadNextEpisode() {    //   5. 拿掉每個檔案都跳一次 Toast 的除錯碼（檔案多時會卡一長串）
         Log.d(TAG, "tryLoadNextEpisode() called")
-        val currentUri = lastSubtitleUri ?: return Toast
-            .makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()// 沒有記錄最後字幕 URI，就直接提示後返回
-        val cursor = contentResolver.query(currentUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null ) // 從 SAF 查出目前檔名（含副檔名）
-        val currentName = cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
-            ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show() }// 沒查到檔名就直接結束
-        Toast.makeText(this, """Next from "$currentName".""", Toast.LENGTH_SHORT).show()
-        val baseNext = buildNextEpisodeBase(currentName)  // 算出下一集的「基底」字串（到 E## 為止）
-        if (baseNext == null)return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  ;  Log.d(TAG, """Next-ep base = "$baseNext" """)     //例如 "Show.S01E04"
-        Toast.makeText(this, "try grab: $baseNext", Toast.LENGTH_LONG).show()//try grab: ...（buildNextEpisodeBase() 產生的字串）
-        val folderUri = lastFolderUri ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  }
-        val folderDoc = DocumentFile.fromTreeUri(this, folderUri) ?: run { return Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()  }
-        val children = folderDoc.listFiles()  //*!*
-        Log.d(TAG, "Children in folder: ${children.map { it.name }}")
-        children.forEach { child -> Toast.makeText(this, "child: ${child.name}", Toast.LENGTH_SHORT).show() }//看畫面上跑出來的 child: ... 幾個檔名
-        val targetDoc = children.firstOrNull { child ->   // 尋找「檔名以 baseNext 開頭」的檔案
-            val name = child.name ?: return@firstOrNull false
-            name.startsWith(baseNext)                     // 尾巴、版本號、解析度全部忽略
-        }
-        if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {
-            lastSubtitleUri = targetDoc.uri               // 更新 lastSubtitleUri
-            handleSubtitleFileSelected(targetDoc.uri)     // 當作選擇新字幕檔重新載入
-        } else { Toast.makeText(this, "No close pattern file", Toast.LENGTH_SHORT).show()}
-    }
+        val currentUri = lastSubtitleUri
+            ?: return toast("沒有目前字幕的紀錄，請先選擇或 Reload 一個字幕檔")
+        val currentName = contentResolver.query(currentUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { if (it.moveToFirst()) it.getString(0) else null }
+            ?: return toast("讀不到目前檔名（檔案權限可能失效，請重新選擇檔案）")
+        val baseNext = buildNextEpisodeBase(currentName)
+            ?: return toast("檔名裡找不到集數（E## 或 ##x##）：$currentName")
+        Log.d(TAG, "Next-ep base = \"$baseNext\"")
 
+        val folderUri = lastFolderUri
+        if (folderUri == null) {                                                  // 沒有資料夾 → 直接請使用者選
+            toast("請選擇字幕所在的資料夾（要選到檔案所在那一層）");  openFolderPicker();   return    }
+        val folderDoc = DocumentFile.fromTreeUri(this, folderUri)
+        if (folderDoc == null || !folderDoc.canRead()) {                          // 權限失效 → 重選
+            toast("資料夾無法讀取，請重新選擇資料夾");    openFolderPicker();     return      }
+        val children = folderDoc.listFiles()
+        Log.d(TAG, "Children in folder: ${children.map { it.name }}")
+
+        val baseNorm = nfc(baseNext)                                              // 基底轉 NFC + 小寫
+        val ext = currentName.substringAfterLast('.', "").lowercase()             // 目前副檔名，例如 srt
+        val targetDoc = children.firstOrNull { child ->                           // 方法 1：前綴比對（NFC）
+            val n = child.name?.let { nfc(it) } ?: return@firstOrNull false
+            n.startsWith(baseNorm) && (ext.isEmpty() || n.endsWith(".$ext"))
+        } ?: findByEpisodeNumber(children, currentName)                           // 方法 2：集數數字比對
+
+        if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {  toast("載入下一集：${targetDoc.name}")
+            lastSubtitleUri = targetDoc.uri;      handleSubtitleFileSelected(targetDoc.uri)
+        } else {  toast("資料夾「${folderDoc.name}」裡找不到：$baseNext（共 ${children.size} 個檔案）")   }
+    }    // [Fix B] 字串轉 NFC + 小寫，讓「看起來一樣」的日文檔名真的相等
+    private fun nfc(s: String): String = Normalizer.normalize(s, Normalizer.Form.NFC).lowercase()
+    // [Fix B] 備用比對：抓出「季數 S## + 集數 E##」的數字，找 同季、集數 +1、同副檔名 的檔案
+    //   例：S01E09 → 找 S01E10；E9 → 找 E10 或 E010（用數字比，不受補零位數影響）
+    private val seasonEpRegex = Regex("(?:[Ss](\\d+))?[Ee](\\d+)")
+    private fun findByEpisodeNumber(children: Array<DocumentFile>, currentName: String): DocumentFile? {
+        val cur = seasonEpRegex.find(nfc(currentName)) ?: return null
+        val curSeason = cur.groupValues[1].toIntOrNull()                          // 沒有 S## 時為 null
+        val curEp = cur.groupValues[2].toIntOrNull() ?: return null
+        val ext = currentName.substringAfterLast('.', "").lowercase()
+        return children.firstOrNull { child ->
+            val n = child.name?.let { nfc(it) } ?: return@firstOrNull false
+            if (ext.isNotEmpty() && !n.endsWith(".$ext")) return@firstOrNull false // 副檔名要相同
+            val m = seasonEpRegex.find(n) ?: return@firstOrNull false
+            val s = m.groupValues[1].toIntOrNull()
+            val e = m.groupValues[2].toIntOrNull() ?: return@firstOrNull false
+            e == curEp + 1 && (curSeason == null || s == null || s == curSeason)  // 集數 +1，季數相同
+        }
+    }    // [Fix B] 簡短 Toast 小工具（回傳 Unit，可以寫成 return toast("..."))
+    private fun toast(msg: String) {   Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();   Log.d(TAG, "Toast: $msg") }
     
 }
