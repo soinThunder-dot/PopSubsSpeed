@@ -30,15 +30,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service   <!-- [Fix A] 宣告為前景服務，類型 specialUse（浮動字幕不屬於其他既有類型） -->
+        <!-- [Fix A] 宣告為前景服務，類型 specialUse（浮動字幕不屬於其他既有類型） -->
+        <service   
             android:name=".OverlayService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse"><!-- specialUse 必須附上用途說明 -->
+            android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Floating subtitle overlay" />
-        </service>
+        </service><!-- specialUse 必須附上用途說明 -->
     </application>
 
 </manifest>
