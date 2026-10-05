@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />    <!-- [Fix 20261005]  14+ 前景必須宣告「類型」對應的權限；浮窗用 specialUse --> 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />    <!-- [Fix 20261005] 顯示通知需要此權限（沒給通知列看不到） --> 
+
 
     
     <application
@@ -27,10 +30,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service
+        <service   <!-- [Fix A] 宣告為前景服務，類型 specialUse（浮動字幕不屬於其他既有類型） -->
             android:name=".OverlayService"
             android:enabled="true"
-            android:exported="false" />    
+            android:exported="false"
+            android:foregroundServiceType="specialUse"><!-- specialUse 必須附上用途說明 -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating subtitle overlay" />
+        </service>
     </application>
 
 </manifest>
