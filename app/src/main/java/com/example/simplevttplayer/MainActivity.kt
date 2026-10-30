@@ -681,12 +681,11 @@ class MainActivity : AppCompatActivity() {
             }
             runOnUiThread {
                 if (!isFinishing && !isDestroyed &&  lastFolderUri == rootAtRequest  ) {
-                    result.fold(  
-                        onSuccess = { children ->  onLoaded(children)  }
-                        onFailure = { error -> 
-                            Log.e(TAG, "Cannot list subtitle folder", error)
-                            toast("讀取資料夾失敗，請重新選擇字幕總資料夾")
-                            openFolderPicker() } )
+                    result.fold(
+                        onSuccess = { children -> onLoaded(children)  },
+                        onFailure = { error ->   Log.e(TAG, "Cannot list subtitle folder", error);
+                            toast("讀取資料夾失敗，請重新選擇字幕總資料夾");  openFolderPicker()
+                    })
                 }  }
         }.start()
     }
