@@ -14,7 +14,6 @@
 package com.example.simplevttplayer   // App package，讓 Service 能被 Android 找到
 
 import android.app.Service            // 繼承 Service 用
-import android.widget.Button          // 顯示BUTTON用的 View but with color
 import android.widget.Toast           // 顯示短提示訊息
 import android.content.BroadcastReceiver  // 用來接 LocalBroadcast 的基類
 import android.content.Context        // Android 上下文物件
@@ -56,13 +55,6 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
         const val ACTION_OVERLAY_CLOSE = "com.example.simplevttplayer.ACTION_OVERLAY_CLOSE"//加 close 按鈕 
         const val NOTIFICATION_ID = 1001                // [Fix A] 前景服務通知用：通知 ID 與通知頻道 ID
         const val CHANNEL_ID = "popsubs_overlay_channel"
-
-        const val ACTION_FIND_NEXT_EP ="com.example.simplevttplayer.FIND_NEXT_EP"
-        const val ACTION_OVERLAY_FONT_CHANGE ="com.example.simplevttplayer.OVERLAY_FONT_CHANGE"
-        const val ACTION_OVERLAY_JAP_TOGGLE ="com.example.simplevttplayer.OVERLAY_JAP_TOGGLE"
-        const val ACTION_UPDATE_JAP_STATE ="com.example.simplevttplayer.UPDATE_JAP_STATE"
-        const val ACTION_REQUEST_OVERLAY_SETTINGS ="com.example.simplevttplayer.REQUEST_OVERLAY_SETTINGS"
-        const val EXTRA_JAP_ENABLED = "jap_enabled"
         val TAG: String = OverlayService::class.java.simpleName                         // Logcat tag
     }
     private lateinit var windowManager: WindowManager           // 系統 Window 管理器，用來控制浮窗
@@ -78,10 +70,6 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
     private lateinit var buttonOverlayNextEp: View              // Overlay 上的「Next Ep」按鈕
     private var currentSubtitle = ""
     private var currentFontSize = 20
-    private lateinit var extraControlRow: View
-    private lateinit var buttonOverlayFindNext: Button
-    private lateinit var editOverlayFontSize: EditText
-    private lateinit var buttonOverlayJap: Button
     
     private val subtitleUpdateReceiver = object : BroadcastReceiver() { // 接收 MainActivity 廣播
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -100,12 +88,6 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
                     val fontSize = intent.getIntExtra(EXTRA_FONT_SIZE, 20) // 預設字體大小 20
                     Log.d(TAG, "Received font size update: $fontSize")
                     updateOverlayFontSize(fontSize)            // 更新 overlay 字體大小
-                }
-                ACTION_UPDATE_JAP_STATE -> {
-                    val enabled = intent.getBooleanExtra(EXTRA_JAP_ENABLED, false)
-                    JpGrammarHighlighter.enabled = enabled
-                    updateJapButton(enabled)              // 即使目前暫停，也立即重新套用高亮。
-                    updateSubtitleText(currentSubtitle)
                 }
                 else -> {  Log.w(TAG, "Unknown broadcast action: ${intent?.action}")  } // 未知 Action 只記錄
             }
@@ -139,33 +121,6 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             setupTimeEditor(editMin)                                       // 對分鐘欄位掛 Enter/DONE 行為
             setupTimeEditor(editSec)                                       // 對秒數欄位掛 Enter/DONE 行為
 
-            extraControlRow = overlayView.findViewById(R.id.extraControlRow)
-            buttonOverlayFindNext = overlayView.findViewById(R.id.buttonOverlayFindNext)
-            editOverlayFontSize =   overlayView.findViewById(R.id.editOverlayFontSize)
-            buttonOverlayJap =      overlayView.findViewById(R.id.buttonOverlayJap)
-            extraControlRow.visibility = View.GONE
-            editOverlayFontSize.setText(currentFontSize.toString())
-            
-            buttonOverlayFindNext.setOnClickListener {
-                val received = LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(ACTION_FIND_NEXT_EP))
-                if (!received) {
-                    Toast.makeText( this, "主頁控制器未連接，請先開啟 PopSubs 主頁", Toast.LENGTH_SHORT ).show()   }
-            }
-            buttonOverlayJap.setOnClickListener {
-                val received = LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(ACTION_OVERLAY_JAP_TOGGLE))
-                if (!received) {
-                    Toast.makeText( this, "主頁控制器未連接，請先開啟 PopSubs 主頁", Toast.LENGTH_SHORT ).show()   }
-            }
-            
-            editOverlayFontSize.setOnClickListener {
-                enableOverlayInput()
-                editOverlayFontSize.requestFocus()
-                editOverlayFontSize.selectAll()
-                imm.showSoftInput(  editOverlayFontSize,   android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT )
-            }
-            setupFontSizeEditor()
-            updateJapButton(JpGrammarHighlighter.enabled)
-            
             buttonOverlayNextEp = overlayView.findViewById(R.id.buttonOverlayNextEp) // 綁定「Next Ep」按鈕
             buttonOverlayNextEp.visibility = View.GONE   // 初始時就隱藏 NEXT 按鈕
             buttonOverlayNextEp.setOnClickListener {
@@ -213,10 +168,8 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
                 addAction(ACTION_PAUSE_PLAY)                               // 要聽暫停/播放
                 addAction(ACTION_RESET_OVERLAY_POSITION)                   // 要聽位置重設
                 addAction(ACTION_UPDATE_FONT_SIZE)                         // 要聽字體大小更新
-                addAction(ACTION_UPDATE_JAP_STATE)
             }
             LocalBroadcastManager.getInstance(this).registerReceiver(subtitleUpdateReceiver, filter) // 註冊接收器
-            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(ACTION_REQUEST_OVERLAY_SETTINGS))
             Log.d(TAG, "BroadcastReceiver registered for all actions.")
         } catch (e: Exception) {
             Log.e(TAG, "Error during OverlayService onCreate", e)
@@ -300,7 +253,6 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
         if (::controlPanel.isInitialized) {    // 2.8: Show/hide control panel on pause/resume
             val vis = if (isPaused) View.VISIBLE else View.GONE
             controlPanel.visibility = vis
-            if (::extraControlRow.isInitialized) {    extraControlRow.visibility = vis }
             if (::buttonOverlayNextEp.isInitialized) { buttonOverlayNextEp.visibility = vis }
             if (::buttonClose.isInitialized) { buttonClose.visibility = vis }
             Log.d(TAG, "Control panel visibility: ${if (isPaused) "VISIBLE" else "GONE"}")
@@ -350,13 +302,13 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             } catch (e: Exception) { Log.e(TAG, "Error resetting overlay position", e) }
         } else { Log.w(TAG, "Cannot move overlay: views not initialized")  }
     }
+
     private fun updateOverlayFontSize(fontSize: Int) {
-        if (fontSize <= 0) return  currentFontSize = fontSize    // 記錄現在字體大小
-        if (::textViewOverlaySubtitle.isInitialized) { textViewOverlaySubtitle.textSize = fontSize.toFloat()  }// 改變 overlay 字體大小
-        if (::editOverlayFontSize.isInitialized) {
-            val value = fontSize.toString()
-            if (editOverlayFontSize.text.toString() != value) {    editOverlayFontSize.setText(value)     }     }
-        Log.d(TAG, "Overlay font size updated: $fontSize")
+        currentFontSize = fontSize                                         // 記錄現在字體大小
+        if (::textViewOverlaySubtitle.isInitialized) {
+            textViewOverlaySubtitle.textSize = fontSize.toFloat()          // 改變 overlay 字體大小
+            Log.d(TAG, "Overlay font size updated to: $fontSize")
+        }
     }
 
     private fun enableOverlayInput() {
@@ -389,28 +341,6 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             } else {  false   }                                            // 不是 Done / Enter 就不處理
         }
     }
-    private fun updateJapButton(enabled: Boolean) {
-        if (!::buttonOverlayJap.isInitialized) return
-        buttonOverlayJap.text = if (enabled) "JAP ON" else "JAP OFF"
-        buttonOverlayJap.setTextColor( android.graphics.Color.parseColor(  if (enabled) "#4CAF50" else "#9E9E9E"  ) )  }
-    private fun setupFontSizeEditor() {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as  android.view.inputmethod.InputMethodManager
-        editOverlayFontSize.setOnEditorActionListener { _, actionId, event ->
-            val isDone =        actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-            val isEnter = event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_UP
-            if (isDone || isEnter) {
-                val size = editOverlayFontSize.text.toString().toIntOrNull()
-                if (size != null && size in 1..40) {
-                    updateOverlayFontSize(size)
-                    val intent = Intent(ACTION_OVERLAY_FONT_CHANGE).apply { putExtra(EXTRA_FONT_SIZE, size)   }
-                    LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-                } else {  editOverlayFontSize.setText(currentFontSize.toString())    }
-                imm.hideSoftInputFromWindow(   editOverlayFontSize.windowToken,  0   )
-                editOverlayFontSize.clearFocus()
-                disableOverlayInput()
-                true
-            } else {  false  }
-        }
-    }
+
     
 }
