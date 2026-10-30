@@ -78,7 +78,8 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
     private lateinit var buttonOverlayNextEp: View              // Overlay 上的「Next Ep」按鈕
     private var currentSubtitle = ""
     private var currentFontSize = 20
-    private lateinit var buttonOverlayFindNext: View
+    private lateinit var extraControlRow: View
+    private lateinit var buttonOverlayFindNext: Button
     private lateinit var editOverlayFontSize: EditText
     private lateinit var buttonOverlayJap: Button
     
@@ -138,9 +139,11 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             setupTimeEditor(editMin)                                       // 對分鐘欄位掛 Enter/DONE 行為
             setupTimeEditor(editSec)                                       // 對秒數欄位掛 Enter/DONE 行為
 
+            extraControlRow = overlayView.findViewById(R.id.extraControlRow)
             buttonOverlayFindNext = overlayView.findViewById(R.id.buttonOverlayFindNext)
             editOverlayFontSize =   overlayView.findViewById(R.id.editOverlayFontSize)
             buttonOverlayJap =      overlayView.findViewById(R.id.buttonOverlayJap)
+            extraControlRow.visibility = View.GONE
             editOverlayFontSize.setText(currentFontSize.toString())
             
             buttonOverlayFindNext.setOnClickListener {
@@ -397,7 +400,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
             val isEnter = event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_UP
             if (isDone || isEnter) {
                 val size = editOverlayFontSize.text.toString().toIntOrNull()
-                if (size != null && size in 1..200) {
+                if (size != null && size in 1..40) {
                     updateOverlayFontSize(size)
                     val intent = Intent(ACTION_OVERLAY_FONT_CHANGE).apply { putExtra(EXTRA_FONT_SIZE, size)   }
                     LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
