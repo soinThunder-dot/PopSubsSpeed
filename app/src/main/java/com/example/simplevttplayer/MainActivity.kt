@@ -383,6 +383,9 @@ class MainActivity : AppCompatActivity() {
         LocalBroadcastManager.getInstance(this).registerReceiver(  overlayExtraControlsReceiver,  extraControlsFilter   )
         sendOverlaySettings()
     }
+    override fun onDestroy() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(overlayExtraControlsReceiver)    
+        super.onDestroy()    }
     
     private fun buildGoogleSearchUrl(query: String): String { // 把「使用者輸入 + site group」組成 Google 搜尋網址
         val raw = "$query $SITE_GROUP_ALL"                    // 在原始關鍵字後面加上站台群組條件
