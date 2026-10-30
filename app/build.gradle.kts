@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.overlayer"
+    namespace = "com.example.simplevttplayer"
     compileSdk = 35
 
     defaultConfig {
