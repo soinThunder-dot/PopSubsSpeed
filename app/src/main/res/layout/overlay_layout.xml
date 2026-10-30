@@ -62,6 +62,70 @@
         <!-- 【控制面板】MIN / SEC 兩格輸入框（跳到指定時間）
              預設 visibility="gone"，暫停時由 OverlayService 設為 VISIBLE
              內容與原本完全相同，只是從獨立一列移進 topControlRow -->
+         <!-- 新增控制列：Find Next / Font / JAP -->
+          <LinearLayout
+              android:id="@+id/extraControlRow"
+              
+              <Button
+                  android:id="@+id/buttonOverlayFindNext"
+                  android:layout_width="wrap_content"
+                  android:layout_height="40dp"
+                  android:minWidth="0dp"
+                  android:minHeight="0dp"
+                  android:paddingLeft="8dp"
+                  android:paddingRight="8dp"
+                  android:text="Find Next"
+                  android:textAllCaps="false"
+                  android:textSize="12sp"
+                  android:textColor="#FFFFFF"
+                  android:background="#CC000000" />
+     
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginStart="8dp"
+                  android:layout_marginEnd="4dp"
+                  android:text="Font:"
+                  android:textColor="#FFFFFF"
+                  android:textSize="13sp" />
+     
+              <EditText
+                  android:id="@+id/editOverlayFontSize"
+                  android:layout_width="44dp"
+                  android:layout_height="40dp"
+                  android:inputType="number"
+                  android:digits="0123456789"
+                  android:maxLength="3"
+                  android:singleLine="true"
+                  android:focusable="true"
+                  android:focusableInTouchMode="true"
+                  android:clickable="true"
+                  android:text="20"
+                  android:textColor="#FFFFFF"
+                  android:textSize="13sp"
+                  android:background="#44FFFFFF"
+                  android:padding="4dp"
+                  android:gravity="center"
+                  android:imeOptions="actionDone"
+                  android:selectAllOnFocus="true" />
+     
+              <Button
+                  android:id="@+id/buttonOverlayJap"
+                  android:layout_width="wrap_content"
+                  android:layout_height="40dp"
+                  android:layout_marginStart="8dp"
+                  android:minWidth="0dp"
+                  android:minHeight="0dp"
+                  android:paddingLeft="8dp"
+                  android:paddingRight="8dp"
+                  android:text="JAP OFF"
+                  android:textAllCaps="false"
+                  android:textSize="12sp"
+                  android:textColor="#9E9E9E"
+                  android:background="#CC000000" />
+          >
+              <!-- Find Next, Font label, font EditText, JAP button -->
+          </LinearLayout>
     <LinearLayout
         android:id="@+id/controlPanel"
         android:layout_width="wrap_content"
