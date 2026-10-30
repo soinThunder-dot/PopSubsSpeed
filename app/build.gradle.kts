@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.simplevttplayer"
+    namespace = "com.example.overlayer"
     compileSdk = 35
 
     defaultConfig {
-                applicationId = "com.example.simplevttplayer.easyview__2"
+                applicationId = "com.example.overlayer.overlayer_2"
         minSdk = 21
         targetSdk = 35
         versionCode = 2
