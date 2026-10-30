@@ -20,6 +20,7 @@ import android.os.Build                  // 判斷系統版本（Build.VERSION.S
 import android.os.Bundle                 // Activity onCreate 的 savedInstanceState
 import android.os.Handler                // 在主執行緒排程 Runnable（更新 UI/計時）
 import android.os.Looper                 // 拿到主執行緒的 Looper（Handler 會用到）
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns  // 用 contentResolver 查 SAF 檔名時用到的欄位常數
 import android.provider.Settings         // 開系統設定頁（例如 overlay 權限）用
 import android.util.Log                  // 寫 Logcat 訊息（Log.d / Log.e 等）
@@ -35,6 +36,7 @@ import android.widget.Toast              // 在畫面下方彈出的短訊息
 import androidx.activity.result.ActivityResultLauncher // 新式 Activity 結果回傳 API 的 launcher 型別
 import androidx.activity.result.contract.ActivityResultContracts // 內建 ActivityResult 合約（如 StartActivityForResult）
 import androidx.appcompat.app.AppCompatActivity        // 支援庫版 Activity（Material/Toolbar 等）
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat             // 向後相容工具（取 drawable / color 等）
 import androidx.documentfile.provider.DocumentFile     // 操作 SAF 資料夾 / 檔案的包裝類
 import androidx.localbroadcastmanager.content.LocalBroadcastManager // app 內部用的 broadcast manager
@@ -62,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         private const val REQUEST_OPEN_FOLDER = 2001  //*!*使用者選字幕時，同步觸發選資料夾
         private const val GOOGLE_BASE = "https://www.google.com/search?udm=14&q="// Google 搜尋 base URL（固定帶 udm=14）+站台 group
         private const val SITE_GROUP_ALL = "(site:kitsunekko.net OR site:jimaku.cc OR site:sub-scene.com OR site:subdl.com OR site:opensubtitles.org OR site:addic7ed.com OR site:subtitlecat.com)"
+        private const val KEY_CURRENT_SUBTITLE_FOLDER_URI = "current_subtitle_folder_uri"//用來記錄授權根目錄；新增的 key 記錄目前字幕所在子資料夾。
         private const val KEY_LAST_FOLDER_URI = "last_folder_uri"   // [Fix B] 儲存字幕資料夾 URI
     }
     private lateinit var editTextQuery: EditText
@@ -183,6 +186,7 @@ class MainActivity : AppCompatActivity() {
     //「Try next ep」按鈕：用 SAF 在同目錄找新檔,原本用 ACTION_OPEN_DOCUMENT 選了一個檔案並且 takePersistableUriPermission，現在可以把這個 uri 存起來，例如在 MainActivity 裡有個變數：
     private var lastSubtitleUri: Uri? = null
     private var lastFolderUri: Uri? = null  //*!*使用者選字幕時，同步觸發選資料夾
+    private var currentSubtitleFolderUri: Uri? = null//lastFolderUri= 已授權的 SRT 總資料夾currentSubtitleFolderUri    = 目前字幕所在的劇集資料夾
     // 【核心函數 1】字幕檔案處理
     /**     * 【處理字幕檔案選擇】     *      * 當使用者從檔案選擇器選擇字幕檔後，此函數統一處理所有相關邏輯
      * 【執行流程】     *      * 步驟 1：記錄 URI     *   - 儲存到 selectedFileUri     *   - 持久化到 SharedPreferences (KEY_LAST_SUBTITLE_URI)     *   → 用途：下次啟動可透過 Reload Last File 快速載入
@@ -230,19 +234,7 @@ class MainActivity : AppCompatActivity() {
      * 【錯誤處理】     *      * 情況 1：resultCode != RESULT_OK     *   → 使用者取消選擇     *   → 不執行任何動作     *      * 情況 2：result.data?.data == null     *   → 系統未返回 URI（罕見）     *   → 不執行任何動作     * 
      * 情況 3：takePersistableUriPermission 拋出 SecurityException     *   → Catch 忽略     *   → 繼續執行 handleSubtitleFileSelected     *   → 當次載入正常，但重啟後無法 Reload
      * 【ActivityResultContracts.StartActivityForResult】    *      * 這是新版 Activity Result API（取代舊的 startActivityForResult）     *      * 優點：  - 類型安全     * - 在 onCreate 前註冊（避免狀態丟失）     * - Lambda 風格，更簡潔 */
-    private val selectSubtitleFileLauncher = registerForActivityResult(        ActivityResultContracts.StartActivityForResult()    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {        // 檢查使用者是否確認選擇（未取消）
-            result.data?.data?.also { uri ->            // 取得選擇的檔案 URI                // 嘗試持久化 URI 權限                // 持久化後，app 重啟後仍可訪問此 URI
-                try {
-                    val flags = result.data?.flags ?: 0
-                    contentResolver.takePersistableUriPermission(   uri,    flags and Intent.FLAG_GRANT_READ_URI_PERMISSION    )
-                    Log.d(TAG, "Persistable URI permission granted: $uri")
-                } catch (e: SecurityException) {   Log.w(TAG, "Failed to take persistable URI permission", e)  }         // 權限無法持久化（例如暫存檔案）     // 忽略錯誤，繼續載入
-                handleSubtitleFileSelected(uri)                // 處理選擇的檔案
-                if (lastFolderUri == null) openFolderPicker()  //*!*
-            }
-        } else {   Log.d(TAG, "File selection cancelled")    }          // 使用者取消選擇
-    }
+     
     // 【核心函數 2】Activity 生命週期
     /**     * 【Activity 創建】     *      * Activity 生命週期第一個被呼叫的方法
      * 【執行內容】     *      * 階段 1：基礎初始化     *   - super.onCreate()     *   - setContentView(R.layout.activity_main)     * 
@@ -282,8 +274,11 @@ class MainActivity : AppCompatActivity() {
             val u = Uri.parse(s)
             val stillGranted = contentResolver.persistedUriPermissions.any { it.uri == u && it.isReadPermission }
             if (stillGranted) lastFolderUri = u    }      // 權限還在才還原   
-        prefsB.getString(KEY_LAST_SUBTITLE_URI, null)?.let { lastSubtitleUri = Uri.parse(it) }
-        
+        prefsB.getString(KEY_LAST_SUBTITLE_URI, null)?.let { lastSubtitleUri = Uri.parse(it)
+            if (lastFolderUri != null) {
+                currentSubtitleFolderUri = prefsB.getString(KEY_CURRENT_SUBTITLE_FOLDER_URI, null)
+                        ?.let { Uri.parse(it) }    }
+        }
         Log.d(TAG, "MainActivity onCreate")        // ===============================================================================
         // 【階段 1】註冊 ActivityResultLauncher    * Overlay 權限請求 Launcher    *  流程：    1. requestOverlayPermission() 呼叫 launcher.launch()    * 2. 跳轉系統設定頁面     * 3. 使用者授權後返回    * 4. Callback 中檢查權限並啟動服務         */
         overlayPermissionLauncher = registerForActivityResult(
@@ -628,23 +623,97 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun openFilePicker() {
-        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)         // 只允許可開啟的文件
-            type = "*/*"                                  // 主類型先設為全部
-            putExtra(     Intent.EXTRA_MIME_TYPES,    arrayOf("text/vtt", "application/x-subrip", "text/plain")    )
-        }                                           // 再用多 MIME 限縮到字幕類型
-        selectSubtitleFileLauncher.launch(i)              // 使用 ActivityResultLauncher 開 SAF picker
-    }//v使用者選字幕時，同步觸發選資料夾---->
-    private fun openFolderPicker() { val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE) ; startActivityForResult(intent, REQUEST_OPEN_FOLDER)}
+        val rootUri = lastFolderUri
+        if (rootUri == null) {  toast("請先選擇字幕總資料夾，例如 SRT");  openFolderPicker();   return   }
+        val root = try {    DocumentFile.fromTreeUri(this, rootUri)    } catch (e: Exception) {
+            Log.e(TAG, "Cannot open subtitle root", e) ;  null    }
+        if (root == null || !root.canRead()) {   toast("字幕總資料夾無法讀取，請重新選擇")
+            openFolderPicker();   return     }
+        showSubtitleBrowser(listOf(root))
+    }
     @Suppress("DEPRECATION")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) { super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_OPEN_FOLDER && resultCode == Activity.RESULT_OK) {
-            val folderUri = data?.data ?: return
-            contentResolver.takePersistableUriPermission( folderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION )
-            lastFolderUri = folderUri  //*!*           
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit() // [Fix B] 存起來，App 被殺或重開後還記得資料夾
-                .putString(KEY_LAST_FOLDER_URI, folderUri.toString()).apply()
-            Toast.makeText(this, "資料夾已設定", Toast.LENGTH_SHORT).show()
+    private fun openFolderPicker() {   val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {    addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+                Intent.FLAG_GRANT_PREFIX_URI_PERMISSION   )   }
+        startActivityForResult(intent, REQUEST_OPEN_FOLDER)
+    }//v使用者選字幕時，觸發母資料夾---->
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(   requestCode: Int,    resultCode: Int,    data: Intent?    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_OPEN_FOLDER ||  resultCode != Activity.RESULT_OK ) {  return  }
+        val folderUri = data?.data ?: return
+        val readFlags = data.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION
+        if (readFlags == 0) {  toast("未取得資料夾讀取權限") ;   return   }
+        try {   contentResolver.takePersistableUriPermission(   folderUri,    readFlags    )
+        } catch (e: SecurityException) {  Log.e(TAG, "Cannot persist folder permission", e) ;
+            toast("未能保存資料夾權限，請重新選擇")  ;    return     }
+        lastFolderUri = folderUri
+        currentSubtitleFolderUri = null
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit() ;        .putString(KEY_LAST_FOLDER_URI, folderUri.toString())
+            .remove(KEY_CURRENT_SUBTITLE_FOLDER_URI) ;     .apply()
+        openFilePicker()
+    }
+    private fun loadSubtitleChildren(  folderUri: Uri,   onLoaded: (Array<DocumentFile>) -> Unit  ) {
+        val rootAtRequest = lastFolderUri
+        Thread {val result = runCatching {
+                val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree( folderUri,  DocumentsContract.getDocumentId(folderUri))
+                val documents = mutableListOf<DocumentFile>()
+                val cursor = contentResolver.query( childrenUri, arrayOf(
+                        DocumentsContract.Document.COLUMN_DOCUMENT_ID  ),  null,  null,  null ) 
+                        ?: error("無法取得資料夾內容")
+                cursor.use {
+                    while (it.moveToNext()) {
+                        val documentId = it.getString(0)
+                        val documentUri = DocumentsContract.buildDocumentUriUsingTree( folderUri,  documentId  )
+                        val document = DocumentFile.fromSingleUri(this, documentUri)
+                        if (document != null) {  documents.add(document)   }
+                    }   }
+                documents.filter { document ->   if (document.isDirectory) { true } else {
+                        val name = document.name.orEmpty()
+                        document.isFile && (name.endsWith(".srt", ignoreCase = true) ||name.endsWith(".vtt", ignoreCase = true))
+                } }.sortedWith(
+                    compareBy<DocumentFile> { !it.isDirectory } .thenBy { it.name.orEmpty().lowercase() }
+                ).toTypedArray()
+            }
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed &&  lastFolderUri == rootAtRequest  ) {
+                    result.fold(  onSuccess = { children ->  onLoaded(children)  };
+                        onFailure = { error -> Log.e(TAG, "Cannot list subtitle folder", error)
+                            toast("讀取資料夾失敗，請重新選擇字幕總資料夾");   openFolderPicker() } )
+                }  }
+        }.start()
+    }
+    private fun showSubtitleBrowser(path: List<DocumentFile>) {
+        val folder = path.last()
+        loadSubtitleChildren(folder.uri) { children ->
+            val canGoUp = path.size > 1
+            val labels = mutableListOf<String>()
+            if (canGoUp) {  labels.add(".. 返回上一層")   }
+            children.forEach { document ->
+                val name = document.name ?: "未命名"
+                labels.add( if (document.isDirectory) "[資料夾] $name"   else name   )
+            }
+            val title = path.joinToString(" / ") {  it.name ?: "資料夾"  }
+            AlertDialog.Builder(this)
+                .setTitle(title)
+                .setItems(labels.toTypedArray()) { _, which ->
+                    if (canGoUp && which == 0) {  showSubtitleBrowser(path.dropLast(1))   } else {
+                        val index = which - if (canGoUp) 1 else 0
+                        val selected = children[index]
+                        if (selected.isDirectory) {  showSubtitleBrowser(path + selected) } else {
+                            currentSubtitleFolderUri = folder.uri
+                            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                                .edit()
+                                .putString( KEY_CURRENT_SUBTITLE_FOLDER_URI,   folder.uri.toString()    )
+                                .apply()
+                            handleSubtitleFileSelected(selected.uri)    }
+                    }
+                }
+                .setNeutralButton("更換總資料夾") { _, _ ->   openFolderPicker()   }
+                .setNegativeButton("取消", null)
+                .show()
         }
     }
     private fun buildNextEpisodeBase(nameWithExt: String): String? { // 回傳「到 E 下一集為止的部分」，丟掉尾巴
@@ -693,36 +762,32 @@ class MainActivity : AppCompatActivity() {
         }    // [Fix B] tryLoadNextEpisode：在同資料夾找下一集字幕並載入    //   改進：
     }    //   1. 每個失敗步驟顯示不同訊息（方便知道卡在哪）    //   2. 沒設定資料夾 → 直接跳出資料夾選擇器，不再只顯示錯誤
     //   3. 檔名先轉成 NFC 再比對（解決日文濁音 NFD/NFC 不一致）    //   4. 找不到時，改用「季數 + 集數數字」比對（E9 → E10、E09 vs E9 都能找到）
-    private fun tryLoadNextEpisode() {    //   5. 拿掉每個檔案都跳一次 Toast 的除錯碼（檔案多時會卡一長串）
+    private fun tryLoadNextEpisode() {
         Log.d(TAG, "tryLoadNextEpisode() called")
-        val currentUri = lastSubtitleUri
-            ?: return toast("沒有目前字幕的紀錄，請先選擇或 Reload 一個字幕檔")
-        val currentName = contentResolver.query(currentUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-            ?.use { if (it.moveToFirst()) it.getString(0) else null }
-            ?: return toast("讀不到目前檔名（檔案權限可能失效，請重新選擇檔案）")
-        val baseNext = buildNextEpisodeBase(currentName)
-            ?: return toast("檔名裡找不到集數（E## 或 ##x##）：$currentName")
-        Log.d(TAG, "Next-ep base = \"$baseNext\"")
-
-        val folderUri = lastFolderUri
-        if (folderUri == null) {                                                  // 沒有資料夾 → 直接請使用者選
-            toast("請選擇字幕所在的資料夾（要選到檔案所在那一層）");  openFolderPicker();   return    }
-        val folderDoc = DocumentFile.fromTreeUri(this, folderUri)
-        if (folderDoc == null || !folderDoc.canRead()) {                          // 權限失效 → 重選
-            toast("資料夾無法讀取，請重新選擇資料夾");    openFolderPicker();     return      }
-        val children = folderDoc.listFiles()
-        Log.d(TAG, "Children in folder: ${children.map { it.name }}")
-
-        val baseNorm = nfc(baseNext)                                              // 基底轉 NFC + 小寫
-        val ext = currentName.substringAfterLast('.', "").lowercase()             // 目前副檔名，例如 srt
-        val targetDoc = children.firstOrNull { child ->                           // 方法 1：前綴比對（NFC）
-            val n = child.name?.let { nfc(it) } ?: return@firstOrNull false
-            n.startsWith(baseNorm) && (ext.isEmpty() || n.endsWith(".$ext"))
-        } ?: findByEpisodeNumber(children, currentName)                           // 方法 2：集數數字比對
-
-        if (targetDoc != null && targetDoc.isFile && targetDoc.canRead()) {  toast("載入下一集：${targetDoc.name}")
-            lastSubtitleUri = targetDoc.uri;      handleSubtitleFileSelected(targetDoc.uri)
-        } else {  toast("資料夾「${folderDoc.name}」裡找不到：$baseNext（共 ${children.size} 個檔案）")   }
+        val currentUri = lastSubtitleUri ?: return toast("請先透過 Select File 選擇字幕")
+        val folderUri = currentSubtitleFolderUri
+        if (folderUri == null) {  toast("請透過 Select File 重新選一次字幕，以記錄所在資料夾") ; openFilePicker() ; return }
+        val currentName = try {   getFileName(currentUri)    } catch (e: Exception) {
+            Log.e(TAG, "Cannot read current subtitle name", e) ;   null
+        } ?: return toast("讀不到目前字幕，請重新選擇檔案")
+        val baseNext = buildNextEpisodeBase(currentName) ?: return toast(    "檔名裡找不到集數（E## 或 ##x##）：$currentName"  )
+        loadSubtitleChildren(folderUri) { children ->       // 查詢期間若已換字幕，就不要載入舊字幕的下一集。
+            if (lastSubtitleUri != currentUri ||  currentSubtitleFolderUri != folderUri   ) {
+                toast("目前字幕已變更，請再按一次 Find Next")
+            } else {val files = children.filter {  it.isFile   }.toTypedArray()
+                    val baseNorm = nfc(baseNext)
+                    val ext = currentName
+                        .substringAfterLast('.', "")
+                        .lowercase()
+                    val targetDoc = files.firstOrNull { child ->
+                        val name = child.name?.let { nfc(it) }
+                        name != null &&  name.startsWith(baseNorm) &&   (ext.isEmpty() || name.endsWith(".$ext"))
+                    } ?: findByEpisodeNumber(files, currentName)
+                    if (targetDoc != null && targetDoc.canRead()) {   toast("載入下一集：${targetDoc.name}");
+                        handleSubtitleFileSelected(targetDoc.uri) } else {   toast(
+                            "目前字幕資料夾裡找不到：$baseNext" +  "（共 ${files.size} 個字幕檔）"   )    }
+            }
+        }
     }    // [Fix B] 字串轉 NFC + 小寫，讓「看起來一樣」的日文檔名真的相等
     private fun nfc(s: String): String = Normalizer.normalize(s, Normalizer.Form.NFC).lowercase()
     // [Fix B] 備用比對：抓出「季數 S## + 集數 E##」的數字，找 同季、集數 +1、同副檔名 的檔案
