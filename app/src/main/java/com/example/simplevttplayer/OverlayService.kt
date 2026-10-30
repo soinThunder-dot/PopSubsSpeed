@@ -351,7 +351,7 @@ class OverlayService : Service() {    // 主角：負責顯示系統浮窗字幕
         } else { Log.w(TAG, "Cannot move overlay: views not initialized")  }
     }
     private fun updateOverlayFontSize(fontSize: Int) {
-        if (fontSize <= 0) return currentFontSize = fontSize ;   // 記錄現在字體大小
+        if (fontSize <= 0) return currentFontSize = fontSize    // 記錄現在字體大小
         if (::textViewOverlaySubtitle.isInitialized) { textViewOverlaySubtitle.textSize = fontSize.toFloat()  }// 改變 overlay 字體大小
         if (::editOverlayFontSize.isInitialized) {
             val value = fontSize.toString()
