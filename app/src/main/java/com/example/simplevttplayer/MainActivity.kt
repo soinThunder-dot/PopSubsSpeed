@@ -103,8 +103,20 @@ class MainActivity : AppCompatActivity() {
                     textViewCurrentTime.text = formatTime(seekToMs)  // 3. 只給 overlay EDIT 用的白SRT time（使用者想看到的）
                     textViewRedTime.text = formatTime(tickingMs)    // // 4. 紅：內部 ticking time
                 }           // [3.0 修改] 同步改成 reloadLastFile()，與 overlayNextEpReceiver 一致, receiver 的 filter  OVERLAY_SEEK保持一致）
-                OverlayService.ACTION_NEXT_EP -> {   reloadLastFile()   }      }            
-        }
+                OverlayService.ACTION_NEXT_EP -> {   reloadLastFile()   }      }      }
+    }
+    private val overlayExtraControlsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {     
+                OverlayService.ACTION_FIND_NEXT_EP -> {     buttonTryNextEp.performClick()  }   
+                OverlayService.ACTION_OVERLAY_JAP_TOGGLE -> {  textViewJpToggle.performClick()   }
+                OverlayService.ACTION_OVERLAY_FONT_CHANGE -> {
+                    val size = intent.getIntExtra(   OverlayService.EXTRA_FONT_SIZE,20  )   
+                    if (size in 1..200) {
+                        val value = size.toString()
+                        if (editTextOverlayFontSize.text.toString() != value) {  editTextOverlayFontSize.setText(value) } }
+                }
+                OverlayService.ACTION_REQUEST_OVERLAY_SETTINGS -> {  sendOverlaySettings()   }    }    }
     }    // 【UI 元件】View 引用
     private lateinit var buttonSelectFile: MaterialButton    /** 【按鈕】選擇字幕檔案 */
     private lateinit var buttonReloadLast: MaterialButton  /** 【按鈕】重新載入上次檔案 (2.8: 會恢復上次播放位置) */
@@ -202,6 +214,14 @@ class MainActivity : AppCompatActivity() {
             }
         } else {  Log.e(TAG, "Failed to get file name from URI: $uri")  ;  Toast.makeText(this, "File name error", Toast.LENGTH_SHORT).show()  ;  resetPlaybackStateOnError() }         // 檔名取得失敗（可能是權限或 URI 無效）
     }
+    private fun sendOverlaySettings() {
+        val manager = LocalBroadcastManager.getInstance(this)
+        val fontSize = editTextOverlayFontSize.text.toString().toIntOrNull()
+            ?.takeIf { it > 0 }     
+            ?: 20
+        manager.sendBroadcast(  Intent(OverlayService.ACTION_UPDATE_FONT_SIZE).apply {  putExtra(OverlayService.EXTRA_FONT_SIZE, fontSize)   }    )
+        manager.sendBroadcast(  Intent(OverlayService.ACTION_UPDATE_JAP_STATE).apply {
+                putExtra(   OverlayService.EXTRA_JAP_ENABLED,  kuromojiEnabled   )   }   )    }
     /**     * 【檔案選擇器啟動器】     *      * 使用 ActivityResultLauncher 註冊檔案選擇器回調
      * 【執行流程】     * 1. 使用者點擊 "Select File" 按鈕     * 2. openFilePicker() 啟動系統檔案選擇器     * 3. 使用者選擇檔案並確認     * 4. 此 launcher 的 callback 被呼叫
      * 5. 檢查 resultCode == RESULT_OK     * 6. 取得 URI：result.data?.data     * 7. 嘗試持久化 URI 權限（takePersistableUriPermission）     * 8. 呼叫 handleSubtitleFileSelected(uri)
@@ -309,7 +329,9 @@ class MainActivity : AppCompatActivity() {
         buttonPlayPause.setOnClickListener {   Log.d(TAG, "Play/Pause button clicked")  ;  togglePlayPause() }        /**         * 【重設按鈕】         * 回到 00:00.000，清空字幕顯示         */
         buttonReset.setOnClickListener {       Log.d(TAG, "Reset button clicked")       ;  resetPlayback()   }        // ===============================================================================
         // 【階段 4】Kuromoji 切換            /**         * 更新 Kuromoji 切換指示器的顏色         * - 啟用：綠色 (#4CAF50)         * - 停用：灰色 (#9E9E9E)         */
-        fun updateJpToggleUi() { textViewJpToggle.setTextColor(if (kuromojiEnabled) { Color.parseColor("#4CAF50") } else { Color.parseColor("#9E9E9E") }) } // 綠色 ON// 灰色 OFF
+        fun updateJpToggleUi() {
+            textViewJpToggle.setTextColor( Color.parseColor(  if (kuromojiEnabled) "#4CAF50" else "#9E9E9E"   )    )
+            sendOverlaySettings()   }        
         updateJpToggleUi()/**  // 初始化顯示狀態       * 點擊切換 Kuromoji 功能         */
         textViewJpToggle.setOnClickListener {          
             kuromojiEnabled = !kuromojiEnabled         // 切換狀態  
@@ -353,6 +375,13 @@ class MainActivity : AppCompatActivity() {
         val deathFilter = IntentFilter("OVERLAY_SERVICE_DIED")         ;    LocalBroadcastManager.getInstance(this).registerReceiver(overlayDeathReceiver, deathFilter)
         val nextEpFilter = IntentFilter(OverlayService.ACTION_NEXT_EP) ;    LocalBroadcastManager.getInstance(this).registerReceiver(overlayNextEpReceiver, nextEpFilter)
         val closeFilter = IntentFilter(OverlayService.ACTION_OVERLAY_CLOSE) ;LocalBroadcastManager.getInstance(this).registerReceiver(overlayCloseReceiver, closeFilter)
+        val extraControlsFilter = IntentFilter().apply {
+            addAction(OverlayService.ACTION_FIND_NEXT_EP)
+            addAction(OverlayService.ACTION_OVERLAY_JAP_TOGGLE)
+            addAction(OverlayService.ACTION_OVERLAY_FONT_CHANGE)
+            addAction(OverlayService.ACTION_REQUEST_OVERLAY_SETTINGS)    }
+        LocalBroadcastManager.getInstance(this).registerReceiver(  overlayExtraControlsReceiver,  extraControlsFilter   )
+        sendOverlaySettings()
     }
     
     private fun buildGoogleSearchUrl(query: String): String { // 把「使用者輸入 + site group」組成 Google 搜尋網址
